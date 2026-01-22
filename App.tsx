@@ -10,6 +10,7 @@ import { Dashboard } from './components/Dashboard';
 import { SevenSteps } from './components/SevenSteps';
 import { ScriptGenerator } from './components/ScriptGenerator';
 import { NicheExamples } from './components/NicheExamples';
+import { LoginModal } from './components/LoginModal'; // Import new modal
 import { ScreenState, QuizAnswers, CalculationResult, CONTACT_RANGES, TICKET_RANGES, PixPaymentData } from './types';
 import { supabase } from './supabase';
 
@@ -20,16 +21,37 @@ const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // Modal state
 
-  // Check for access on mount
+  // Check for access on mount and listen for Auth Changes (Magic Link)
   useEffect(() => {
+    // 1. Check local storage fallback
     const hasAccess = localStorage.getItem('acessoLiberado');
-    
-    // Simple routing check if user refreshes on success or dashboard
     if (hasAccess === 'true') {
-      // Optional: Could automatically redirect to dashboard if access is present
-      // For this flow, we'll let the user navigate naturally unless they are explicitly trying to access dashboard
+      // If user is already "logged in" via local storage, we could auto-redirect,
+      // but usually we wait for user action or if they are on a protected route.
     }
+
+    // 2. Listen for Supabase Auth state changes (Magic Link Return)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // User just logged in (e.g. via Magic Link)
+        localStorage.setItem('acessoLiberado', 'true');
+        localStorage.setItem('userEmail', session.user.email || '');
+        
+        // Redirect to dashboard
+        setScreen('dashboard');
+        setIsLoginModalOpen(false); // Close modal if open
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('acessoLiberado');
+        localStorage.removeItem('userEmail');
+        setScreen('landing');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Logic to calculate the "Money Lost" based on user inputs
@@ -233,10 +255,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('acessoLiberado');
     localStorage.removeItem('cobrancaId');
     localStorage.removeItem('emailCompra');
+    localStorage.removeItem('userEmail');
     setScreen('landing');
     window.scrollTo(0,0);
   };
@@ -256,8 +280,18 @@ const App: React.FC = () => {
 
   return (
     <div className="font-sans antialiased text-gray-900">
+      
+      {/* Global Login Modal */}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
+
       {screen === 'landing' && (
-        <LandingPage onStart={() => setScreen('quiz')} />
+        <LandingPage 
+          onStart={() => setScreen('quiz')} 
+          onLoginClick={() => setIsLoginModalOpen(true)}
+        />
       )}
       
       {screen === 'quiz' && (

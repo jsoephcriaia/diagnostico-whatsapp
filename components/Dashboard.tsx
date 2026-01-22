@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { LogOut, ClipboardList, Zap, FolderOpen, User } from 'lucide-react';
+import { supabase } from '../supabase';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -7,7 +8,22 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onLogout, onNavigate }) => {
-  const userName = localStorage.getItem('emailCompra')?.split('@')[0] || 'Aluno';
+  const [userName, setUserName] = useState('Aluno');
+
+  useEffect(() => {
+    // Try to get from local storage first
+    const storedEmail = localStorage.getItem('userEmail') || localStorage.getItem('emailCompra');
+    if (storedEmail) {
+      setUserName(storedEmail.split('@')[0]);
+    } else {
+      // Try to get active session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) {
+          setUserName(session.user.email.split('@')[0]);
+        }
+      });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -24,7 +40,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, onNavigate }) =>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
               <User className="w-4 h-4" />
-              <span className="max-w-[100px] truncate">Olá, {userName}</span>
+              <span className="max-w-[150px] truncate">Olá, {userName}</span>
             </div>
             <button 
               onClick={onLogout}

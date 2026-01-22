@@ -3,9 +3,10 @@ import { MessageCircle, Clock, DollarSign, UserX, ArrowRight, ArrowLeft, Check, 
 
 interface LandingPageProps {
   onStart: () => void;
+  onLoginClick: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onLoginClick }) => {
   return (
     <div className="flex flex-col min-h-screen bg-white overflow-x-hidden font-sans">
       
@@ -24,7 +25,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <span className="font-bold text-xl text-darkBlue tracking-tight">Diagnóstico WhatsApp</span>
         </div>
         <button 
-          onClick={onStart}
+          onClick={onLoginClick}
           className="hidden md:flex text-sm font-semibold text-darkBlue hover:text-whatsapp transition-colors items-center gap-2 group bg-white border border-gray-200 px-5 py-2.5 rounded-full shadow-sm hover:shadow-md"
         >
           Login <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
