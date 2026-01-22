@@ -6,7 +6,7 @@
     <title>Diagnóstico WhatsApp</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -17,9 +17,32 @@
             },
             colors: {
               whatsapp: '#25D366',
-              whatsappDark: '#128C7E',
-              darkBlue: '#1E293B',
+              whatsappDark: '#075E54',
+              chatOutgoing: '#d9fdd3',
+              chatIncoming: '#ffffff',
+              darkBlue: '#0f172a',
               slateText: '#374151',
+              neonGreen: '#39ff14',
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+              'pop-in': 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+              'slide-in-right': 'slideInRight 0.8s ease-out forwards',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              popIn: {
+                '0%': { opacity: '0', transform: 'scale(0.8)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
+              slideInRight: {
+                '0%': { opacity: '0', transform: 'translateX(50px)' },
+                '100%': { opacity: '1', transform: 'translateX(0)' },
+              }
             }
           }
         }
@@ -31,32 +54,41 @@
         -moz-osx-font-smoothing: grayscale;
         background-color: #F9FAFB;
       }
-
-      /* Fix inputs visibility */
-      input[type="text"],
-      input[type="email"],
-      input[type="number"],
-      textarea,
-      select {
-        background-color: #ffffff;
-        color: #1e293b;
-        border: 1px solid #d1d5db;
+      
+      /* Chat Bubble Tail CSS */
+      .chat-tail-in::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -8px;
+        width: 0;
+        height: 0;
+        border: 8px solid transparent;
+        border-top-color: #ffffff;
+        border-right-color: #ffffff;
+        border-bottom: 0;
+      }
+      
+      .chat-tail-out::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -8px;
+        width: 0;
+        height: 0;
+        border: 8px solid transparent;
+        border-top-color: #d9fdd3;
+        border-left-color: #d9fdd3;
+        border-bottom: 0;
       }
 
-      input[type="text"]::placeholder,
-      input[type="email"]::placeholder,
-      input[type="number"]::placeholder,
-      textarea::placeholder {
-        color: #9ca3af;
+      /* Custom Scrollbar for Phone */
+      .phone-scroll::-webkit-scrollbar {
+        width: 4px;
       }
-
-      input[type="text"]:focus,
-      input[type="email"]:focus,
-      input[type="number"]:focus,
-      textarea:focus {
-        border-color: #22c55e;
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+      .phone-scroll::-webkit-scrollbar-thumb {
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 4px;
       }
     </style>
   <script type="importmap">
@@ -74,6 +106,5 @@
 </head>
   <body>
     <div id="root"></div>
-       <script type="module" src="/index.tsx"></script>
   </body>
 </html>
