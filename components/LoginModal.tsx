@@ -95,7 +95,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={status === 'loading'}
-                  className="w-full p-4 rounded-xl border border-gray-200 focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all text-lg"
+                  className="w-full p-4 rounded-xl border border-gray-200 bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all text-lg placeholder-gray-400"
                   autoFocus
                 />
               </div>
@@ -121,7 +121,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             </form>
             
             <p className="text-xs text-gray-400 mt-4">
-              Não precisa de senha. Nós enviamos um link mágico para seu email.
+              Não precisa de senha, nós enviamos um link de acesso direto para seu email.
             </p>
           </div>
         )}
