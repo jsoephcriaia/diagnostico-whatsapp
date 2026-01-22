@@ -1,4 +1,4 @@
-export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'dashboard' | 'seven-steps' | 'generator' | 'examples';
+export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'create-account' | 'reset-password' | 'dashboard' | 'seven-steps' | 'generator' | 'examples';
 
 export interface QuizAnswers {
   contactsRange: string | number;

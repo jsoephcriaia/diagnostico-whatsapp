@@ -48,7 +48,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
         },
         body: JSON.stringify({
           nome: formData.name,
-          cpf: formData.cpf,
+          cpf: formData.cpf.replace(/\D/g, ''), // Remove mask (dots and dash)
           email: formData.email,
           formaPagamento: formData.paymentMethod
         })
@@ -149,7 +149,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
                     placeholder="Seu nome completo"
                     required
                   />
@@ -162,7 +162,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
                     name="cpf"
                     value={formData.cpf}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
                     placeholder="000.000.000-00"
                     maxLength={14}
                     required
@@ -176,7 +176,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
                     required
                   />
                 </div>

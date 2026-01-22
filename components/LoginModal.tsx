@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, AlertCircle, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { X, Mail, AlertCircle, Loader2, ArrowRight, Lock, KeyRound } from 'lucide-react';
 import { supabase } from '../supabase';
 
 interface LoginModalProps {
@@ -7,58 +7,99 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
+type ViewState = 'login' | 'forgot-password';
+
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+  const [view, setView] = useState<ViewState>('login');
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'not_found'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSendLink = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) return;
-
-    setStatus('loading');
-    setErrorMessage('');
+    setIsLoading(true);
+    setError('');
 
     try {
-      // 1. Verificar se o email existe e pagou
+      // 1. Authenticate with Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('Email ou senha incorretos.');
+        }
+        throw authError;
+      }
+
+      // 2. Check if user paid (in leads table)
       const { data: lead, error: leadError } = await supabase
         .from('leads')
-        .select('email, pagou')
+        .select('pagou')
         .eq('email', email)
         .maybeSingle();
 
-      if (leadError) throw leadError;
-
-      // Se não achou o lead ou não pagou
       if (!lead || !lead.pagou) {
-        setStatus('not_found');
-        return;
+        // Log out immediately if not paid
+        await supabase.auth.signOut();
+        throw new Error('Pagamento não identificado para este email.');
       }
 
-      // 2. Enviar Magic Link
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          // Redireciona para a raiz, o App.tsx gerencia o estado baseado na sessão
-          emailRedirectTo: window.location.origin 
-        }
-      });
+      // Success - App.tsx subscription handles redirection
+      onClose();
 
-      if (authError) throw authError;
-
-      setStatus('success');
-    } catch (error: any) {
-      console.error('Erro no login:', error);
-      setStatus('error');
-      setErrorMessage(error.message || 'Ocorreu um erro. Tente novamente.');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Ocorreu um erro ao entrar.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setStatus('idle');
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Digite seu email primeiro.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}`, // Redirects to root, App.tsx handles PASSWORD_RECOVERY event
+      });
+
+      if (error) throw error;
+
+      setSuccessMessage('Link de recuperação enviado! Verifique seu email.');
+      setTimeout(() => {
+        setView('login');
+        setSuccessMessage('');
+      }, 5000);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro ao enviar email de recuperação.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetState = () => {
+    setView('login');
     setEmail('');
+    setPassword('');
+    setError('');
+    setSuccessMessage('');
   };
 
   return (
@@ -75,105 +116,137 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <X className="w-6 h-6" />
         </button>
 
-        {/* State: IDLE or LOADING */}
-        {(status === 'idle' || status === 'loading' || status === 'error') && (
+        {view === 'login' ? (
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-               <Mail className="w-8 h-8 text-whatsapp" />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-darkBlue mb-2">Acessar Área do Aluno</h2>
+            <h2 className="text-2xl font-bold text-darkBlue mb-2">Entrar no Protocolo</h2>
             <p className="text-gray-500 mb-6">
-              Digite o email utilizado na compra para receber seu link de acesso exclusivo.
+              Digite seu email e senha para acessar.
             </p>
 
-            <form onSubmit={handleSendLink} className="text-left space-y-4">
+            <form onSubmit={handleLogin} className="text-left space-y-4">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={status === 'loading'}
-                  className="w-full p-4 rounded-xl border border-gray-200 bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all text-lg placeholder-gray-400"
-                  autoFocus
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all"
+                  required
                 />
               </div>
 
-              {status === 'error' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                <input
+                  type="password"
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all"
+                  required
+                />
+              </div>
+
+              {error && (
                 <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg">
                   <AlertCircle className="w-4 h-4" />
-                  {errorMessage}
+                  {error}
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={status === 'loading' || !email}
+                disabled={isLoading}
                 className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {status === 'loading' ? (
-                  <> <Loader2 className="w-5 h-5 animate-spin" /> Verificando... </>
-                ) : (
-                  <> Enviar Link de Acesso <ArrowRight className="w-5 h-5" /> </>
-                )}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
+                {!isLoading && <ArrowRight className="w-5 h-5" />}
               </button>
             </form>
             
-            <p className="text-xs text-gray-400 mt-4">
-              Não precisa de senha, nós enviamos um link de acesso direto para seu email.
-            </p>
-          </div>
-        )}
-
-        {/* State: SUCCESS */}
-        {status === 'success' && (
-          <div className="text-center py-4">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-               <CheckCircle className="w-10 h-10 text-whatsapp" />
-            </div>
-            <h2 className="text-2xl font-bold text-darkBlue mb-4">Link Enviado!</h2>
-            <div className="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-100">
-              <p className="text-gray-600 text-sm mb-1">Enviamos o acesso para:</p>
-              <p className="font-bold text-darkBlue break-all">{email}</p>
-            </div>
-            <p className="text-gray-500 mb-8 text-sm">
-              Verifique sua caixa de entrada (e a pasta de spam/lixo eletrônico). Clique no link do email para entrar direto.
-            </p>
-            <button 
-              onClick={onClose}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-darkBlue font-bold py-3 rounded-xl transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        )}
-
-        {/* State: NOT FOUND */}
-        {status === 'not_found' && (
-          <div className="text-center py-4">
-            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-               <AlertCircle className="w-10 h-10 text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-darkBlue mb-4">Acesso Não Encontrado</h2>
-            <p className="text-gray-500 mb-6">
-              O email <strong>{email}</strong> não consta como aluno ou o pagamento ainda não foi confirmado.
-            </p>
-            
-            <div className="space-y-3">
+            <div className="mt-4 flex flex-col gap-3">
               <button 
-                onClick={resetForm}
-                className="w-full bg-darkBlue hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-colors"
+                onClick={() => {
+                  setView('forgot-password');
+                  setError('');
+                }}
+                className="text-sm text-gray-500 hover:text-darkBlue underline"
               >
-                Tentar outro email
+                Esqueci minha senha
               </button>
+              
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">ou</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div>
+
               <button 
                 onClick={onClose}
-                className="w-full bg-white border-2 border-whatsapp text-whatsapp hover:bg-green-50 font-bold py-3 rounded-xl transition-colors"
+                className="text-whatsapp font-bold hover:underline"
               >
-                Quero fazer o diagnóstico
+                Ainda não tenho conta (Fazer Diagnóstico)
               </button>
             </div>
+          </div>
+        ) : (
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+               <KeyRound className="w-8 h-8 text-blue-500" />
+            </div>
+
+            <h2 className="text-2xl font-bold text-darkBlue mb-2">Recuperar Senha</h2>
+            <p className="text-gray-500 mb-6">
+              Digite seu email e enviaremos um link para você redefinir sua senha.
+            </p>
+
+            <form onSubmit={handleForgotPassword} className="text-left space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition-all"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="text-green-600 text-sm flex items-center gap-2 bg-green-50 p-3 rounded-lg">
+                  <AlertCircle className="w-4 h-4" />
+                  {successMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-darkBlue hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enviar Link de Recuperação'}
+              </button>
+            </form>
+
+            <button 
+              onClick={() => {
+                setView('login');
+                setError('');
+                setSuccessMessage('');
+              }}
+              className="mt-6 text-sm text-gray-500 hover:text-darkBlue flex items-center justify-center gap-1 mx-auto"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" /> Voltar para o login
+            </button>
           </div>
         )}
 

@@ -5,12 +5,14 @@ import { EmailCapture } from './components/EmailCapture';
 import { ResultPage } from './components/ResultPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { PixPaymentPage } from './components/PixPaymentPage';
-import { SuccessPage } from './components/SuccessPage';
+import { CreateAccountPage } from './components/CreateAccountPage'; // New
+import { ResetPasswordPage } from './components/ResetPasswordPage'; // New
+import { SuccessPage } from './components/SuccessPage'; // Kept as fallback
 import { Dashboard } from './components/Dashboard';
 import { SevenSteps } from './components/SevenSteps';
 import { ScriptGenerator } from './components/ScriptGenerator';
 import { NicheExamples } from './components/NicheExamples';
-import { LoginModal } from './components/LoginModal'; // Import new modal
+import { LoginModal } from './components/LoginModal'; 
 import { ScreenState, QuizAnswers, CalculationResult, CONTACT_RANGES, TICKET_RANGES, PixPaymentData } from './types';
 import { supabase } from './supabase';
 
@@ -21,38 +23,70 @@ const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // Modal state
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // Check for access on mount and listen for Auth Changes (Magic Link)
+  // Check for access on mount and listen for Auth Changes
   useEffect(() => {
-    // 1. Check local storage fallback
-    const hasAccess = localStorage.getItem('acessoLiberado');
-    if (hasAccess === 'true') {
-      // If user is already "logged in" via local storage, we could auto-redirect,
-      // but usually we wait for user action or if they are on a protected route.
-    }
-
-    // 2. Listen for Supabase Auth state changes (Magic Link Return)
+    // 1. Listen for Supabase Auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth Event:', event);
+
       if (event === 'SIGNED_IN' && session) {
-        // User just logged in (e.g. via Magic Link)
-        localStorage.setItem('acessoLiberado', 'true');
-        localStorage.setItem('userEmail', session.user.email || '');
-        
-        // Redirect to dashboard
-        setScreen('dashboard');
-        setIsLoginModalOpen(false); // Close modal if open
+        // User just logged in
+        // Check if they have paid
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('pagou')
+          .eq('email', session.user.email)
+          .maybeSingle();
+
+        if (lead && lead.pagou) {
+          localStorage.setItem('acessoLiberado', 'true');
+          localStorage.setItem('userEmail', session.user.email || '');
+          setScreen('dashboard');
+          setIsLoginModalOpen(false);
+        } else {
+          // If logged in but not paid (unlikely via UI, but possible via API)
+          // We could force logout or show error.
+          // For now, staying on current screen or landing.
+        }
       } else if (event === 'SIGNED_OUT') {
         localStorage.removeItem('acessoLiberado');
         localStorage.removeItem('userEmail');
         setScreen('landing');
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link in email
+        setScreen('reset-password');
       }
     });
+
+    // 2. Initial Session Check (Persistent Login)
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+         const { data: lead } = await supabase
+          .from('leads')
+          .select('pagou')
+          .eq('email', session.user.email)
+          .maybeSingle();
+        
+        if (lead && lead.pagou) {
+          localStorage.setItem('acessoLiberado', 'true');
+          localStorage.setItem('userEmail', session.user.email || '');
+          // Only redirect to dashboard if we are on landing or login flow
+          if (screen === 'landing') {
+             setScreen('dashboard');
+          }
+        }
+      }
+    };
+    
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Run once on mount
 
   // Logic to calculate the "Money Lost" based on user inputs
   const calculateResult = (data: QuizAnswers): CalculationResult => {
@@ -173,10 +207,9 @@ const App: React.FC = () => {
       updated_at: new Date().toISOString()
     };
 
-    // 3. Save to Supabase (Robust Upsert Logic)
+    // 3. Save to Supabase
     if (supabase) {
       try {
-        // Tentar UPSERT (Inserir ou Atualizar se conflito no email)
         const { error: upsertError } = await supabase
           .from('leads')
           .upsert(leadData, { 
@@ -185,30 +218,11 @@ const App: React.FC = () => {
           });
 
         if (upsertError) {
-          console.warn('Upsert falhou, tentando método alternativo manual...', upsertError);
-
-          // Fallback: Verificar se existe -> Update ou Insert
-          const { data: existingLead } = await supabase
-            .from('leads')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle();
-
-          if (existingLead) {
-            // Atualizar
-            await supabase
-              .from('leads')
-              .update(leadData)
-              .eq('id', existingLead.id);
-          } else {
-            // Inserir
-            await supabase
-              .from('leads')
-              .insert([leadData]);
-          }
+           // Fallback logic handled silently or via console
+           console.warn('Upsert warning:', upsertError);
         }
       } catch (error) {
-        console.error('Erro crítico ao salvar lead:', error);
+        console.error('Error saving lead:', error);
       }
     }
 
@@ -226,9 +240,9 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Called after API verification returns success
+  // Called after payment verified (manual or automatic)
   const handlePaymentConfirmed = async () => {
-    // 1. Update Supabase (Optimistic or Double check, handled by Edge Function mostly)
+    // 1. Update Lead Paid Status (Redundant safety check)
     if (supabase && userEmail) {
       await supabase
         .from('leads')
@@ -239,20 +253,20 @@ const App: React.FC = () => {
         .eq('email', userEmail);
     }
 
-    // 2. Show Success Screen
-    setScreen('success');
+    // 2. Redirect to Account Creation instead of Success Page
+    setScreen('create-account');
     window.scrollTo(0,0);
   };
 
-  const handleGoToDashboard = () => {
-    // Verify protection one last time
-    if (localStorage.getItem('acessoLiberado') === 'true') {
-      setScreen('dashboard');
-      window.scrollTo(0,0);
-    } else {
-      alert('Acesso não autorizado. Por favor, verifique seu pagamento.');
-      setScreen('landing');
-    }
+  const handleAccountCreated = () => {
+    // User created password and is logged in
+    setScreen('dashboard');
+    window.scrollTo(0,0);
+  };
+
+  const handlePasswordResetSuccess = () => {
+    setScreen('dashboard');
+    window.scrollTo(0,0);
   };
 
   const handleLogout = async () => {
@@ -281,7 +295,6 @@ const App: React.FC = () => {
   return (
     <div className="font-sans antialiased text-gray-900">
       
-      {/* Global Login Modal */}
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
@@ -333,8 +346,24 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* New Flow: Create Account after payment */}
+      {screen === 'create-account' && (
+        <CreateAccountPage 
+          email={userEmail || localStorage.getItem('emailCompra') || ''}
+          onAccountCreated={handleAccountCreated}
+        />
+      )}
+
+      {/* New Flow: Reset Password */}
+      {screen === 'reset-password' && (
+        <ResetPasswordPage 
+          onSuccess={handlePasswordResetSuccess}
+        />
+      )}
+
+      {/* Fallback Success Page (might be unused now) */}
       {screen === 'success' && (
-        <SuccessPage onGoToDashboard={handleGoToDashboard} />
+        <SuccessPage onGoToDashboard={() => setScreen('dashboard')} />
       )}
 
       {screen === 'dashboard' && (
