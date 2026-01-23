@@ -244,6 +244,10 @@ export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGene
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleUpgradeClick = () => {
+    window.dispatchEvent(new CustomEvent('navigate-to-ai'));
+  };
+
   const currentScripts = SCRIPTS_BY_NICHE[selectedNiche];
 
   return (
@@ -334,7 +338,8 @@ export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGene
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-12 space-y-4">
+        <div className="mt-12 space-y-8">
+          {/* 1. GREEN BUTTON: Go to Generator */}
           <button 
             onClick={onGoToGenerator}
             className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2"
@@ -342,6 +347,24 @@ export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGene
             Personalizar para meu negócio <ArrowRight className="w-5 h-5" />
           </button>
           
+          {/* 2. CTA: AI Secretary */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-whatsapp rounded-2xl p-8 text-center shadow-sm">
+            <div className="text-4xl mb-4">🤖</div>
+            <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-3 flex items-center justify-center gap-2">
+              Quer automatizar tudo isso?
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+              Você aprendeu o protocolo. Agora imagine ele funcionando sozinho, 24 horas por dia, sem você precisar fazer nada.
+            </p>
+            <button 
+              onClick={handleUpgradeClick}
+              className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2 transform hover:scale-105"
+            >
+              Conhecer a Secretária de IA <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Back Button */}
           <button 
             onClick={onBack}
             className="w-full text-gray-500 hover:text-darkBlue font-medium py-2 transition"

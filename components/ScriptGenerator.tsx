@@ -526,17 +526,19 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
             </div>
           ))}
 
+          {/* CTA: AI Secretary */}
           <div className="mt-12 pt-12 border-t border-gray-200">
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-whatsapp rounded-2xl p-8 text-center shadow-sm">
+              <div className="text-4xl mb-4">🤖</div>
               <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-3 flex items-center justify-center gap-2">
-                🤖 E se esses scripts funcionassem sozinhos?
+                Quer automatizar tudo isso?
               </h3>
               <p className="text-gray-600 mb-6 max-w-lg mx-auto">
-                Seus scripts personalizados + inteligência artificial = atendimento automático 24h que converte enquanto você dorme.
+                Você aprendeu o protocolo. Agora imagine ele funcionando sozinho, 24 horas por dia, sem você precisar fazer nada.
               </p>
               <button 
                 onClick={handleUpgradeClick}
-                className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2"
+                className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2 transform hover:scale-105"
               >
                 Conhecer a Secretária de IA <ArrowRight className="w-4 h-4" />
               </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { Quiz } from './components/Quiz';
 import { EmailCapture } from './components/EmailCapture';
@@ -24,46 +24,56 @@ const App: React.FC = () => {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [userPhone, setUserPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  
+  // Estados de Loading e Sessão
+  const [isLoading, setIsLoading] = useState(false); // Para ações internas (botões)
+  const [isCheckingSession, setIsCheckingSession] = useState(true); // Para splash screen inicial
+  const [showLoadingFallback, setShowLoadingFallback] = useState(false); // Botão de emergência
+
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // Listen for custom navigation events dispatched from deep child components
+  // Listener para navegação interna
   useEffect(() => {
     const handleNavigationEvent = () => {
       setScreen('ai-secretary');
       window.scrollTo(0, 0);
     };
-
     window.addEventListener('navigate-to-ai', handleNavigationEvent);
-
-    return () => {
-      window.removeEventListener('navigate-to-ai', handleNavigationEvent);
-    };
+    return () => window.removeEventListener('navigate-to-ai', handleNavigationEvent);
   }, []);
 
-  // Initial Session Check & Auth Listener
+  // --- VERIFICAÇÃO DE SESSÃO ROBUSTA ---
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
+    
+    // Timer para mostrar botão de fallback se travar
+    const fallbackTimer = setTimeout(() => {
+      if (isMounted) setShowLoadingFallback(true);
+    }, 5000);
 
-    const checkInitialSession = async () => {
+    const initSession = async () => {
       try {
-        // 1. Check for Recovery Hash (Priority)
-        const hash = window.location.hash;
-        if (hash && hash.includes('type=recovery')) {
-          if (mounted) {
-            setScreen('reset-password');
-            setIsCheckingSession(false);
-          }
-          return;
-        }
+        // Promessa de timeout de 3 segundos
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na verificação')), 3000)
+        );
 
-        // 2. Check Existing Session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          // Verify Payment
+        // Lógica de verificação
+        const checkLogic = async () => {
+          // 1. Prioridade: Recuperação de Senha via URL
+          if (window.location.hash && window.location.hash.includes('type=recovery')) {
+            return 'reset-password';
+          }
+
+          // 2. Verificar Sessão no Supabase
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error || !session) {
+            return 'landing';
+          }
+
+          // 3. Verificar Pagamento (Leads)
           const { data: lead } = await supabase
             .from('leads')
             .select('pagou')
@@ -71,70 +81,71 @@ const App: React.FC = () => {
             .maybeSingle();
 
           if (lead && lead.pagou) {
-            if (mounted) {
-              localStorage.setItem('acessoLiberado', 'true');
-              localStorage.setItem('userEmail', session.user.email || '');
-              setScreen('dashboard');
-            }
+            // Sucesso: Usuário logado e pagante
+            localStorage.setItem('acessoLiberado', 'true');
+            localStorage.setItem('userEmail', session.user.email || '');
+            return 'dashboard';
           } else {
-            // Logged in but not paid? Sign out to be safe/clean
+            // Logado mas não pagou (ou erro na busca): Deslogar por segurança
             await supabase.auth.signOut();
-            if (mounted) setScreen('landing');
+            return 'landing';
           }
-        } else {
-          // No session
-          if (mounted) setScreen('landing');
+        };
+
+        // Corrida entre a lógica e o timeout
+        const nextScreen = await Promise.race([checkLogic(), timeoutPromise]) as ScreenState;
+
+        if (isMounted) {
+          setScreen(nextScreen);
         }
+
       } catch (error) {
-        console.error("Session check error:", error);
-        if (mounted) setScreen('landing');
+        console.warn("Sessão: Falha ou Timeout.", error);
+        // Em caso de erro/timeout, assume landing page para não travar o usuário
+        if (isMounted) setScreen('landing');
       } finally {
-        if (mounted) setIsCheckingSession(false);
+        if (isMounted) {
+          setIsCheckingSession(false);
+          clearTimeout(fallbackTimer);
+        }
       }
     };
 
-    checkInitialSession();
+    initSession();
 
-    // 3. Listen for Auth Changes (Login/Logout during usage)
+    // Listener de Auth simplificado apenas para logout/login subsequente
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      console.log('Auth Event:', event);
-
-      if (event === 'PASSWORD_RECOVERY') {
-        setScreen('reset-password');
-      } else if (event === 'SIGNED_IN' && session) {
-        // Check payment on login event
-        const { data: lead } = await supabase
-          .from('leads')
-          .select('pagou')
-          .eq('email', session.user.email)
-          .maybeSingle();
-
-        if (lead && lead.pagou) {
-          localStorage.setItem('acessoLiberado', 'true');
-          localStorage.setItem('userEmail', session.user.email || '');
-          
-          if (screen !== 'reset-password') {
-            setScreen('dashboard');
-            setIsLoginModalOpen(false);
-          }
-        }
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         localStorage.removeItem('acessoLiberado');
         localStorage.removeItem('userEmail');
         setScreen('landing');
+      } else if (event === 'SIGNED_IN' && session) {
+        // Só redireciona se estiver na landing ou login, para não atrapalhar fluxos ativos
+        if (screen === 'landing') {
+           const { data: lead } = await supabase
+            .from('leads')
+            .select('pagou')
+            .eq('email', session.user.email)
+            .maybeSingle();
+            
+           if (lead?.pagou) {
+             setScreen('dashboard');
+             setIsLoginModalOpen(false);
+           }
+        }
       }
     });
 
     return () => {
-      mounted = false;
+      isMounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
-  }, []); // Run once on mount
+  }, []); 
 
-  // Logic to calculate the "Money Lost" based on user inputs
+  // --- FUNÇÕES DE NEGÓCIO ---
+
   const calculateResult = (data: QuizAnswers): CalculationResult => {
-    // 1. Get Contacts (Manual or Range Avg)
     let contacts = 0;
     if (typeof data.contactsRange === 'number') {
       contacts = data.contactsRange;
@@ -143,7 +154,6 @@ const App: React.FC = () => {
       contacts = range ? range.avg : 0;
     }
 
-    // 2. Get Ticket (Manual or Range Avg)
     let ticket = 0;
     if (typeof data.ticketRange === 'number') {
       ticket = data.ticketRange;
@@ -152,7 +162,6 @@ const App: React.FC = () => {
       ticket = range ? range.avg : 0;
     }
     
-    // 3. Current Rate (Manual or Selection)
     let currentRate = 0.03;
     if (typeof data.conversionRate === 'number') {
       currentRate = data.conversionRate > 0 ? (1 / data.conversionRate) : 0;
@@ -168,7 +177,6 @@ const App: React.FC = () => {
       }
     }
 
-    // 3. Potential Rate based on Response Time
     let potentialRate = 0.10; 
     switch (data.responseTime) {
       case 'menos_5min': potentialRate = 0.40; break;
@@ -184,14 +192,12 @@ const App: React.FC = () => {
       potentialRate = currentRate + 0.10;
     }
 
-    // 4. Calculate Gap and Loss
     const gap = potentialRate - currentRate;
     const finalGap = gap > 0 ? gap : 0.05; 
 
     const monthlyLoss = contacts * ticket * finalGap;
     const annualLoss = monthlyLoss * 12;
 
-    // 5. Determine Main Problem
     let mainProblem: 'tempo_resposta' | 'falta_processo' = 'tempo_resposta';
     
     if (data.responseTime === 'mais_2h' || data.responseTime === 'depende') {
@@ -220,11 +226,9 @@ const App: React.FC = () => {
     setUserPhone(phone);
     setIsLoading(true);
     
-    // 1. Calculate
     const calculation = calculateResult(answers);
     setResult(calculation);
 
-    // 2. Prepare data
     const contactsManual = typeof answers.contactsRange === 'number';
     let contactsVal = contactsManual 
       ? (answers.contactsRange as number) 
@@ -239,7 +243,7 @@ const App: React.FC = () => {
     
     const leadData = {
       email,
-      whatsapp: phone.replace(/\D/g, ''), // Store clean number
+      whatsapp: phone.replace(/\D/g, ''),
       contatos_mes: contactsVal,
       contatos_mes_manual: contactsManual,
       ticket_medio: ticketVal,
@@ -253,26 +257,19 @@ const App: React.FC = () => {
       updated_at: new Date().toISOString()
     };
 
-    // 3. Save to Supabase
     if (supabase) {
       try {
-        const { error: upsertError } = await supabase
+        await supabase
           .from('leads')
           .upsert(leadData, { 
             onConflict: 'email',
             ignoreDuplicates: false 
           });
-
-        if (upsertError) {
-           // Fallback logic handled silently or via console
-           console.warn('Upsert warning:', upsertError);
-        }
       } catch (error) {
         console.error('Error saving lead:', error);
       }
     }
 
-    // 4. UX Transition
     setTimeout(() => {
       setIsLoading(false);
       setScreen('result');
@@ -286,9 +283,7 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Called after payment verified (manual or automatic)
   const handlePaymentConfirmed = async () => {
-    // 1. Update Lead Paid Status (Redundant safety check)
     if (supabase && userEmail) {
       await supabase
         .from('leads')
@@ -298,62 +293,77 @@ const App: React.FC = () => {
         })
         .eq('email', userEmail);
     }
-
-    // 2. Redirect to Account Creation instead of Success Page
     setScreen('create-account');
     window.scrollTo(0,0);
   };
 
   const handleAccountCreated = () => {
-    // User created password and is logged in
     setScreen('dashboard');
     window.scrollTo(0,0);
   };
 
   const handlePasswordResetSuccess = () => {
-    // User is logged in and password is new
     setScreen('dashboard');
     window.scrollTo(0,0);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('acessoLiberado');
-    localStorage.removeItem('cobrancaId');
-    localStorage.removeItem('emailCompra');
-    localStorage.removeItem('userEmail');
-    setScreen('landing');
-    window.scrollTo(0,0);
+    // A limpeza e redirecionamento são tratados pelo listener onAuthStateChange
   };
 
   const handleDashboardNavigate = (module: string) => {
-    if (module === '7-passos') {
-      setScreen('seven-steps');
-      window.scrollTo(0,0);
-    } else if (module === 'gerador') {
-      setScreen('generator');
-      window.scrollTo(0,0);
-    } else if (module === 'exemplos') {
-      setScreen('examples');
-      window.scrollTo(0,0);
-    } else if (module === 'ai-secretary') {
-      setScreen('ai-secretary');
+    const map: Record<string, ScreenState> = {
+      '7-passos': 'seven-steps',
+      'gerador': 'generator',
+      'exemplos': 'examples',
+      'ai-secretary': 'ai-secretary'
+    };
+    if (map[module]) {
+      setScreen(map[module]);
       window.scrollTo(0,0);
     }
   };
 
-  // Splash Screen while checking session
+  const handleForceReset = async () => {
+    localStorage.clear();
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
+  // --- TELA DE LOADING INICIAL ---
   if (isCheckingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen flex items-center justify-center bg-white px-4">
+        <div className="flex flex-col items-center gap-6 max-w-sm w-full">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-gray-100 border-t-whatsapp rounded-full animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
                <div className="w-2 h-2 bg-whatsapp rounded-full"></div>
             </div>
           </div>
-          <p className="text-gray-400 text-sm font-medium animate-pulse">Carregando...</p>
+          
+          <div className="text-center space-y-2">
+            <p className="text-gray-500 font-medium animate-pulse">
+              Conectando ao sistema...
+            </p>
+          </div>
+
+          {showLoadingFallback && (
+            <div className="animate-fade-in-up w-full">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 mb-4 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p>A conexão está mais lenta que o normal.</p>
+              </div>
+              <button 
+                onClick={handleForceReset}
+                className="w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:text-darkBlue transition-colors flex items-center justify-center gap-2 shadow-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reiniciar Aplicação
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -414,7 +424,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* New Flow: Create Account after payment */}
       {screen === 'create-account' && (
         <CreateAccountPage 
           email={userEmail || localStorage.getItem('emailCompra') || ''}
@@ -422,14 +431,12 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* New Flow: Reset Password */}
       {screen === 'reset-password' && (
         <ResetPasswordPage 
           onSuccess={handlePasswordResetSuccess}
         />
       )}
 
-      {/* Fallback Success Page (might be unused now) */}
       {screen === 'success' && (
         <SuccessPage onGoToDashboard={() => setScreen('dashboard')} />
       )}

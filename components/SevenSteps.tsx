@@ -373,31 +373,30 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
           </div>
         </div>
 
-        {/* Upgrade Section - AI Secretary */}
-        <div className="mt-12 pt-12 border-t border-gray-200">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-whatsapp rounded-2xl p-8 text-center shadow-sm">
-            <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-3 flex items-center justify-center gap-2">
-              🤖 Quer automatizar tudo isso?
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
-              Você aprendeu o protocolo. Agora imagine ele funcionando sozinho, 24 horas por dia, sem você precisar fazer nada.
-            </p>
-            <button 
-              onClick={handleUpgradeClick}
-              className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2"
-            >
-              Conhecer a Secretária de IA <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Footer Action */}
-        <div className="mt-8 text-center pb-8">
+        {/* 1. GREEN BUTTON: Go to Generator */}
+        <div className="mb-12 text-center">
           <button 
             onClick={onNavigateToGenerator}
-            className="w-full md:w-auto text-gray-500 hover:text-darkBlue font-medium py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
+            className="inline-flex items-center gap-2 bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 px-8 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
           >
-            Ir para o Gerador de Scripts <ArrowRight className="w-5 h-5" />
+            Ir para o Gerador de Scripts <ArrowRight className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* 2. CTA: AI Secretary */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-whatsapp rounded-2xl p-8 text-center shadow-sm">
+          <div className="text-4xl mb-4">🤖</div>
+          <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-3 flex items-center justify-center gap-2">
+            Quer automatizar tudo isso?
+          </h3>
+          <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+            Você aprendeu o protocolo. Agora imagine ele funcionando sozinho, 24 horas por dia, sem você precisar fazer nada.
+          </p>
+          <button 
+            onClick={handleUpgradeClick}
+            className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2 transform hover:scale-105"
+          >
+            Conhecer a Secretária de IA <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 

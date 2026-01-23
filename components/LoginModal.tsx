@@ -25,30 +25,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setError('');
 
     try {
-      // 0. Pre-check: Verify if already logged in to prevent loops
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
-      if (existingSession) {
-        // If logged in, assume user wants to access paid area with current account
-        // Check payment immediately
-        const { data: lead } = await supabase
-          .from('leads')
-          .select('pagou')
-          .eq('email', existingSession.user.email)
-          .maybeSingle();
+      // CORREÇÃO CRÍTICA: Forçar logout antes de tentar logar
+      // Isso limpa sessões fantasmas/expiradas que causam loop infinito
+      await supabase.auth.signOut();
 
-        if (lead && lead.pagou) {
-          // Already paid and logged in
-          onClose(); // App.tsx will handle redirect via listener
-          setIsLoading(false);
-          return;
-        } else {
-          // Logged in but not paid - Sign out to allow fresh login/attempt
-          await supabase.auth.signOut();
-        }
-      }
-
-      // 1. Authenticate with Supabase
+      // 1. Autenticar no Supabase
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -61,24 +42,28 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         throw authError;
       }
 
-      // 2. Check if user paid (in leads table)
-      const { data: lead, error: leadError } = await supabase
-        .from('leads')
-        .select('pagou')
-        .eq('email', email)
-        .maybeSingle();
+      if (data.session) {
+        // 2. Verificar se o usuário pagou (tabela leads)
+        const { data: lead, error: leadError } = await supabase
+          .from('leads')
+          .select('pagou')
+          .eq('email', email)
+          .maybeSingle();
 
-      if (!lead || !lead.pagou) {
-        // Log out immediately if not paid
-        await supabase.auth.signOut();
-        throw new Error('Pagamento não identificado para este email.');
+        if (!lead || !lead.pagou) {
+          // Se não pagou, desloga imediatamente e mostra erro
+          await supabase.auth.signOut();
+          throw new Error('Acesso não liberado. Complete a compra primeiro.');
+        }
+
+        // Sucesso: O listener onAuthStateChange no App.tsx cuidará do redirecionamento
+        onClose();
       }
-
-      // Success - App.tsx subscription handles redirection
-      onClose();
 
     } catch (err: any) {
       console.error(err);
+      // Garantir logout em caso de erro para não deixar estado sujo
+      await supabase.auth.signOut();
       setError(err.message || 'Ocorreu um erro ao entrar.');
     } finally {
       setIsLoading(false);
