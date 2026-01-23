@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, AlertCircle, Loader2, ArrowRight, Lock, KeyRound } from 'lucide-react';
 import { supabase } from '../supabase';
+import { traduzirErro } from '../utils/errorUtils';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialView?: 'login' | 'forgot-password';
 }
 
 type ViewState = 'login' | 'forgot-password';
 
-export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const [view, setView] = useState<ViewState>('login');
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 'login' }) => {
+  const [view, setView] = useState<ViewState>(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setView(initialView);
+      setError('');
+      setSuccessMessage('');
+      // Mantém o email se o usuário já tiver digitado antes, ou limpa se preferir
+    }
+  }, [isOpen, initialView]);
 
   if (!isOpen) return null;
 
@@ -86,21 +98,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       clearTimeout(timeoutId!);
       console.error('Erro no fluxo de login:', err);
 
-      let msg = 'Erro ao fazer login. Tente novamente.';
-      
-      if (err.message?.includes('Tempo esgotado')) {
-        msg = err.message;
-      } else if (err.message?.includes('Invalid login credentials')) {
-        msg = 'Email ou senha incorretos.';
-      } else if (err.message?.includes('Email not confirmed')) {
-        msg = 'Email não confirmado. Verifique sua caixa de entrada.';
-      } else if (err.message?.includes('Acesso não liberado')) {
-        msg = err.message;
-      } else if (err.message?.includes('Network request failed')) {
-        msg = 'Erro de conexão. Verifique sua internet.';
-      }
-
-      setError(msg);
+      setError(traduzirErro(err.message));
 
       // Em caso de erro (exceto timeout), garantir que limpamos o estado local
       if (!err.message?.includes('Tempo esgotado')) {
@@ -137,7 +135,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Erro ao enviar email de recuperação.');
+      setError(traduzirErro(err.message));
     } finally {
       setIsLoading(false);
     }

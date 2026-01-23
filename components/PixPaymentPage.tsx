@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, CheckCircle, Clock, ShieldCheck, ArrowRight, Loader2, AlertCircle, RefreshCw, CreditCard, ExternalLink } from 'lucide-react';
+import { Copy, CheckCircle, Clock, ShieldCheck, ArrowRight, Loader2, AlertCircle, RefreshCw, CreditCard, ExternalLink, ArrowLeft, MousePointerClick, AlertTriangle } from 'lucide-react';
 import { PixPaymentData } from '../types';
 
 interface PixPaymentPageProps {
   data: PixPaymentData;
   onPaymentConfirmed: () => void;
+  onChangePaymentMethod: () => void;
 }
 
-export const PixPaymentPage: React.FC<PixPaymentPageProps> = ({ data, onPaymentConfirmed }) => {
+export const PixPaymentPage: React.FC<PixPaymentPageProps> = ({ data, onPaymentConfirmed, onChangePaymentMethod }) => {
   const [copied, setCopied] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState('');
@@ -88,12 +89,19 @@ export const PixPaymentPage: React.FC<PixPaymentPageProps> = ({ data, onPaymentC
             {isCard ? 'Finalize seu Pagamento' : 'Aguardando Pagamento'}
           </h2>
           <p className="text-gray-300 text-sm mt-1">
-            {isCard ? 'Conclua na nova aba aberta' : 'Finalize para liberar seu acesso'}
+            {isCard ? 'Siga os passos abaixo para liberar seu acesso' : 'Escaneie o QR Code abaixo'}
           </p>
         </div>
 
         <div className="p-8 flex flex-col items-center">
           
+          <button 
+            onClick={onChangePaymentMethod}
+            className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4 cursor-pointer bg-transparent border-none"
+          >
+            <ArrowLeft className="w-4 h-4" /> Alterar forma de pagamento
+          </button>
+
           {/* Valor */}
           <div className="mb-6 text-center">
             <p className="text-gray-500 text-sm font-medium uppercase tracking-wide">Valor Total</p>
@@ -104,28 +112,77 @@ export const PixPaymentPage: React.FC<PixPaymentPageProps> = ({ data, onPaymentC
 
           {/* Conditional Layout: Card vs PIX */}
           {isCard ? (
-            <div className="w-full mb-6">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center mb-6">
-                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <CreditCard className="w-8 h-8 text-blue-600" />
-                 </div>
-                 <h3 className="font-bold text-blue-900 mb-2">Página de pagamento aberta</h3>
-                 <p className="text-sm text-blue-800/80">
-                   Uma nova guia foi aberta para você digitar os dados do cartão. 
-                   Assim que concluir, esta tela atualizará automaticamente.
-                 </p>
+            <div className="w-full mb-2">
+              
+              {/* Steps Container */}
+              <div className="bg-slate-50 rounded-xl p-5 mb-6 border border-slate-100 text-left space-y-4 divide-y divide-slate-200">
+                {/* Step 1 */}
+                <div className="flex items-start gap-3 pt-1">
+                  <div className="w-7 h-7 bg-whatsapp text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm mt-0.5">1</div>
+                  <div className="flex flex-col">
+                    <strong className="text-slate-800 text-sm">Clique no botão abaixo</strong>
+                    <span className="text-slate-500 text-xs">Uma nova aba abrirá com o pagamento seguro</span>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex items-start gap-3 pt-4">
+                  <div className="w-7 h-7 bg-slate-300 text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">2</div>
+                  <div className="flex flex-col">
+                    <strong className="text-slate-800 text-sm">Preencha os dados do cartão</strong>
+                    <span className="text-slate-500 text-xs">Na página do Asaas (ambiente seguro)</span>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-start gap-3 pt-4">
+                  <div className="w-7 h-7 bg-slate-300 text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">3</div>
+                  <div className="flex flex-col">
+                    <strong className="text-slate-800 text-sm">Após pagar, FECHE a aba e volte aqui</strong>
+                    <span className="text-slate-500 text-xs">Esta página detectará o pagamento automaticamente</span>
+                  </div>
+                </div>
               </div>
 
+              {/* Action Button */}
               {data.paymentLink && (
                 <a 
                   href={data.paymentLink} 
                   target="_blank" 
-                  rel="noreferrer"
-                  className="w-full bg-white border-2 border-darkBlue text-darkBlue font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors mb-4"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white py-4 px-6 rounded-xl font-bold text-lg mb-6 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 animate-pulse-slow"
                 >
-                  Reabrir Pagamento <ExternalLink className="w-4 h-4" />
+                  Abrir Página de Pagamento <ExternalLink className="w-5 h-5" />
                 </a>
               )}
+
+              {/* Warning Box */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex gap-3 text-left">
+                 <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+                 <p className="text-yellow-800 text-sm leading-relaxed">
+                   <strong>Importante:</strong> Após concluir o pagamento na outra aba, feche-a e volte para esta página. O sistema detectará automaticamente.
+                 </p>
+              </div>
+
+              {/* Auto Check Indicator */}
+              <div className="flex items-center justify-center gap-2 mb-6 text-gray-500 text-sm bg-gray-50 py-2 rounded-lg border border-gray-100">
+                <div className="w-4 h-4 border-2 border-slate-300 border-t-whatsapp rounded-full animate-spin"></div>
+                <span>Verificando pagamento automaticamente...</span>
+              </div>
+
+              {/* Manual Check Button */}
+              <button 
+                onClick={handleManualVerification}
+                disabled={isVerifying}
+                className="w-full bg-white border border-gray-200 hover:border-darkBlue hover:bg-gray-50 text-slate-600 hover:text-darkBlue font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-70 text-sm"
+              >
+                {isVerifying ? (
+                  <> <Loader2 className="w-4 h-4 animate-spin" /> Verificando... </>
+                ) : (
+                  <> Já paguei e fechei a aba <CheckCircle className="w-4 h-4" /> </>
+                )}
+              </button>
+
             </div>
           ) : (
             <>
@@ -175,39 +232,38 @@ export const PixPaymentPage: React.FC<PixPaymentPageProps> = ({ data, onPaymentC
                 <Clock className="w-3 h-3" />
                 PIX válido por 30 minutos
               </div>
+
+              {/* Automatic Verification Indicator */}
+              <div className="flex items-center justify-center gap-2 mb-4 text-gray-500 text-sm">
+                 <div className="w-4 h-4 border-2 border-gray-300 border-t-whatsapp rounded-full animate-spin"></div>
+                 <span>Verificando pagamento automaticamente...</span>
+              </div>
+
+              <button 
+                onClick={handleManualVerification}
+                disabled={isVerifying}
+                className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition-transform transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" /> Verificando...
+                  </>
+                ) : (
+                  <>
+                    Já realizei o pagamento <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
             </>
           )}
 
           {/* Error Message */}
           {verificationError && (
-            <div className="w-full bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 flex items-center gap-2">
+            <div className="w-full bg-red-50 text-red-600 p-3 rounded-lg text-sm mt-4 flex items-center gap-2 animate-fade-in">
               <AlertCircle className="w-4 h-4 shrink-0" />
               {verificationError}
             </div>
           )}
-
-          {/* Action Button */}
-          <button 
-            onClick={handleManualVerification}
-            disabled={isVerifying}
-            className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition-transform transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
-          >
-            {isVerifying ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" /> Verificando...
-              </>
-            ) : (
-              <>
-                Já realizei o pagamento <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-          
-          {/* Automatic Verification Indicator */}
-          <div className="flex items-center justify-center gap-2 mt-4 text-gray-500 text-sm">
-             <div className="w-4 h-4 border-2 border-gray-300 border-t-whatsapp rounded-full animate-spin"></div>
-             <span>Verificando pagamento automaticamente...</span>
-          </div>
 
         </div>
         

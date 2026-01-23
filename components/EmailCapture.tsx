@@ -3,11 +3,12 @@ import { Lock, ArrowRight, CheckCircle } from 'lucide-react';
 import { maskPhone } from '../utils/paymentUtils';
 
 interface EmailCaptureProps {
-  onSubmit: (email: string, phone: string) => void;
+  onSubmit: (name: string, email: string, phone: string) => void;
   isLoading: boolean;
 }
 
 export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
@@ -28,6 +29,11 @@ export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (name.trim().length < 2) {
+      setError('Por favor, digite seu nome.');
+      return;
+    }
+
     if (!validateEmail(email)) {
       setError('Por favor, digite um email válido.');
       return;
@@ -40,7 +46,7 @@ export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading 
     }
 
     setError('');
-    onSubmit(email, phone);
+    onSubmit(name, email, phone);
   };
 
   return (
@@ -59,6 +65,22 @@ export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="text-left space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seu nome</label>
+              <input
+                type="text"
+                placeholder="Como podemos te chamar?"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError('');
+                }}
+                disabled={isLoading}
+                className="w-full p-4 rounded-lg border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-whatsapp transition-colors outline-none text-lg"
+                required
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input

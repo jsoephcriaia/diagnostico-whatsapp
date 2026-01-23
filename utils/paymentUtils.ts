@@ -8,6 +8,25 @@ export const maskCPF = (value: string) => {
     .replace(/(-\d{2})\d+?$/, '$1');
 };
 
+export const maskCpfCnpj = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  
+  if (numbers.length <= 11) {
+    return numbers
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  } else {
+    return numbers
+      .substring(0, 14)
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+};
+
 export const maskPhone = (value: string) => {
   let r = value.replace(/\D/g, '');
   if (r.length > 11) r = r.substring(0, 11);
@@ -62,4 +81,9 @@ export const validateCPF = (cpf: string) => {
   if (rev !== parseInt(cpf.charAt(10))) return false;
   
   return true;
+};
+
+export const validateCpfCnpj = (val: string) => {
+  const numbers = val.replace(/\D/g, '');
+  return numbers.length === 11 || numbers.length === 14;
 };

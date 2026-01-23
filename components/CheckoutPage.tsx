@@ -1,22 +1,34 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, CreditCard, QrCode, CheckCircle, ArrowLeft, Loader2, ExternalLink } from 'lucide-react';
-import { maskCPF, maskPhone, validateCPF } from '../utils/paymentUtils';
+import { ShieldCheck, Lock, CreditCard, QrCode, CheckCircle, ArrowLeft, Loader2, ChevronRight, User } from 'lucide-react';
+import { maskCpfCnpj, maskPhone, validateCpfCnpj } from '../utils/paymentUtils';
 import { PixPaymentData } from '../types';
 
 interface CheckoutPageProps {
   initialEmail: string;
   initialPhone?: string;
+  initialStep?: 'personal_data' | 'payment_method';
   onPixCreated: (data: PixPaymentData) => void;
   onBack: () => void;
 }
 
-export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initialPhone, onPixCreated, onBack }) => {
+type CheckoutStep = 'personal_data' | 'payment_method';
+
+export const CheckoutPage: React.FC<CheckoutPageProps> = ({ 
+  initialEmail, 
+  initialPhone, 
+  initialStep = 'personal_data',
+  onPixCreated, 
+  onBack 
+}) => {
+  const [step, setStep] = useState<CheckoutStep>(initialStep);
+  
+  // Dados do formulário
+  // Tenta recuperar do localStorage caso o usuário esteja voltando de uma tentativa de pagamento
   const [formData, setFormData] = useState({
-    name: '',
-    cpf: '',
-    email: initialEmail,
+    name: localStorage.getItem('nomeCliente') || '',
+    cpf: localStorage.getItem('cpfCliente') || '',
+    email: initialEmail || localStorage.getItem('emailCompra') || '',
     whatsapp: initialPhone || '',
-    paymentMethod: 'pix' as 'pix' | 'cartao',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -26,39 +38,49 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
     const { name, value } = e.target;
     let formattedValue = value;
 
-    if (name === 'cpf') formattedValue = maskCPF(value);
+    if (name === 'cpf') formattedValue = maskCpfCnpj(value);
     if (name === 'whatsapp') formattedValue = maskPhone(value);
 
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
     setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Etapa 1: Validar dados e avançar
+  const handleDataSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    // Basic Validation
-    if (formData.name.length < 3) return setError('Digite seu nome completo.');
-    if (!validateCPF(formData.cpf)) return setError('CPF inválido.');
+
+    if (formData.name.trim().length < 3) return setError('Digite seu nome completo.');
+    if (!validateCpfCnpj(formData.cpf)) return setError('Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
     const rawPhone = formData.whatsapp.replace(/\D/g, '');
     if (rawPhone.length < 10) return setError('WhatsApp inválido (digite com DDD).');
-    
+    if (!formData.email.includes('@')) return setError('Email inválido.');
+
+    setStep('payment_method');
+  };
+
+  // Etapa 2: Criar Cobrança (Pix ou Cartão)
+  const createPayment = async (method: 'pix' | 'cartao') => {
     setIsLoading(true);
+    setError('');
 
     try {
+      // Prepara payload
+      const payload = {
+        nome: formData.name,
+        email: formData.email,
+        cpfCnpj: formData.cpf.replace(/\D/g, ''), // Asaas exige apenas números
+        telefone: formData.whatsapp.replace(/\D/g, ''),
+        // Se for PIX, manda 'PIX'. Se for cartão, manda 'CREDIT_CARD' para forçar a tela de cartão
+        billingType: method === 'pix' ? 'PIX' : 'CREDIT_CARD'
+      };
+
       const response = await fetch('https://wlpqifxosgeoiofmjbsa.supabase.co/functions/v1/criar-cobranca', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          nome: formData.name,
-          email: formData.email,
-          cpfCnpj: formData.cpf.replace(/\D/g, ''),
-          telefone: rawPhone,
-          formaPagamento: formData.paymentMethod,
-          billingType: formData.paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD'
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -67,61 +89,61 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
         throw new Error(result.error || 'Erro ao processar pagamento.');
       }
 
-      // Save IDs for later check
+      // Salvar dados para verificação posterior
       localStorage.setItem('cobrancaId', result.cobrancaId);
       localStorage.setItem('emailCompra', formData.email);
       localStorage.setItem('nomeCliente', formData.name);
+      localStorage.setItem('cpfCliente', formData.cpf);
 
-      if (formData.paymentMethod === 'pix') {
-        onPixCreated({
-          qrCode: result.pix.qrCode,
-          copiaECola: result.pix.copiaECola,
-          cobrancaId: result.cobrancaId,
-          valor: 49.00,
-          paymentMethod: 'pix'
-        });
-      } else {
-        // Fluxo Cartão: Abre em nova aba e mantem o app rodando para verificar
-        if (result.linkPagamento) {
-          window.open(result.linkPagamento, '_blank');
-        }
-        
-        onPixCreated({
-          qrCode: '',
-          copiaECola: '',
-          cobrancaId: result.cobrancaId,
-          valor: 49.00,
-          paymentMethod: 'cartao',
-          paymentLink: result.linkPagamento
-        });
-      }
+      // Mapear resposta da API para o tipo interno
+      // A API retorna pixQrCode e pixCopiaECola no primeiro nível
+      const paymentData: PixPaymentData = {
+        cobrancaId: result.cobrancaId,
+        valor: 49.00,
+        paymentMethod: method,
+        // Se for PIX, mapeia os campos de QR Code
+        qrCode: result.pixQrCode || '',
+        copiaECola: result.pixCopiaECola || '',
+        // Se for Cartão (ou Undefined), mapeia a URL da fatura
+        paymentLink: result.invoiceUrl || result.linkPagamento || ''
+      };
+
+      onPixCreated(paymentData);
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Ocorreu um erro ao conectar com o servidor. Tente novamente.');
+      setError(err.message || 'Erro ao conectar com o servidor.');
       setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 'payment_method') {
+      setStep('personal_data');
+    } else {
+      onBack();
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Simple Header */}
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 py-4 px-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <button onClick={onBack} className="text-gray-500 hover:text-darkBlue">
+          <button onClick={handleBack} className="text-gray-500 hover:text-darkBlue">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-whatsapp" />
             <span className="font-semibold text-slateText">Checkout Seguro</span>
           </div>
-          <div className="w-6"></div> {/* Spacer for centering */}
+          <div className="w-6"></div>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-8 grid md:grid-cols-12 gap-8">
         
-        {/* Order Summary */}
+        {/* Resumo do Pedido (Lateral) */}
         <div className="md:col-span-5 md:col-start-8 md:row-start-1 h-fit">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
             <h3 className="text-lg font-bold text-darkBlue mb-4">Resumo do Pedido</h3>
@@ -147,149 +169,162 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
           </div>
         </div>
 
-        {/* Checkout Form */}
+        {/* Área Principal */}
         <div className="md:col-span-7 md:row-start-1">
-          <h1 className="text-2xl font-bold text-darkBlue mb-6">Finalizar Compra</h1>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Personal Data */}
-            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-              <h3 className="text-lg font-semibold text-slateText mb-2 flex items-center gap-2">
-                <span className="bg-gray-100 w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
-                Dados Pessoais
-              </h3>
+          {/* ETAPA 1: DADOS PESSOAIS */}
+          {step === 'personal_data' && (
+            <div className="animate-fade-in-right">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-10 h-10 bg-darkBlue text-white rounded-full flex items-center justify-center font-bold text-lg">1</div>
+                 <h1 className="text-2xl font-bold text-darkBlue">Seus dados para pagamento</h1>
+              </div>
               
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
-                    placeholder="Seu nome completo"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-                  <input
-                    type="text"
-                    name="cpf"
-                    value={formData.cpf}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
-                    placeholder="000.000.000-00"
-                    maxLength={14}
-                    required
-                  />
-                </div>
+              <form onSubmit={handleDataSubmit} className="space-y-6">
+                <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                        placeholder="Seu nome completo"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ</label>
+                      <input
+                        type="text"
+                        name="cpf"
+                        value={formData.cpf}
+                        onChange={handleInputChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                        placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                        maxLength={18}
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-                  <input
-                    type="tel"
-                    name="whatsapp"
-                    value={formData.whatsapp}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
-                    placeholder="(11) 99999-9999"
-                    maxLength={15}
-                    required
-                  />
-                </div>
-              </div>
-            </section>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                        required
+                      />
+                    </div>
 
-            {/* Payment Method */}
-            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-6">
-              <h3 className="text-lg font-semibold text-slateText mb-2 flex items-center gap-2">
-                <span className="bg-gray-100 w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
-                Pagamento
-              </h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                      <input
+                        type="tel"
+                        name="whatsapp"
+                        value={formData.whatsapp}
+                        onChange={handleInputChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                        placeholder="(11) 99999-9999"
+                        maxLength={15}
+                        required
+                      />
+                    </div>
+                  </div>
+                </section>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'pix' }))}
-                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
-                    formData.paymentMethod === 'pix' 
-                      ? 'border-whatsapp bg-green-50 text-darkBlue' 
-                      : 'border-gray-200 hover:border-gray-300 text-gray-500'
-                  }`}
-                >
-                  <QrCode className="w-6 h-6" />
-                  <span className="font-semibold">PIX</span>
-                  {formData.paymentMethod === 'pix' && <div className="absolute top-2 right-2 text-xs bg-whatsapp text-white px-2 py-0.5 rounded-full">Rápido</div>}
-                </button>
+                {error && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
+                    <span className="font-bold">!</span> {error}
+                  </div>
+                )}
 
                 <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'cartao' }))}
-                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
-                    formData.paymentMethod === 'cartao' 
-                      ? 'border-whatsapp bg-green-50 text-darkBlue' 
-                      : 'border-gray-200 hover:border-gray-300 text-gray-500'
-                  }`}
+                  type="submit"
+                  className="w-full bg-darkBlue hover:bg-slate-800 text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
-                  <CreditCard className="w-6 h-6" />
-                  <span className="font-semibold">Cartão</span>
+                  Continuar <ChevronRight className="w-5 h-5" />
                 </button>
-              </div>
+              </form>
+            </div>
+          )}
 
-              {formData.paymentMethod === 'cartao' && (
-                 <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-lg text-sm flex items-start gap-3">
-                   <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
-                   <div>
-                     <p className="font-bold mb-1">Ambiente Seguro</p>
-                     <p>Para sua segurança, uma nova aba será aberta para você digitar os dados do cartão com criptografia bancária.</p>
-                   </div>
-                 </div>
-              )}
+          {/* ETAPA 2: FORMA DE PAGAMENTO */}
+          {step === 'payment_method' && (
+            <div className="animate-fade-in-right">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-10 h-10 bg-darkBlue text-white rounded-full flex items-center justify-center font-bold text-lg">2</div>
+                 <h1 className="text-2xl font-bold text-darkBlue">Como você prefere pagar?</h1>
+              </div>
+              
+              <div className="bg-white p-4 rounded-lg border border-gray-100 mb-6 flex items-center gap-3 text-sm text-gray-600">
+                <User className="w-4 h-4 text-gray-400" />
+                <span>Dados de: <strong>{formData.name}</strong> ({formData.cpf})</span>
+              </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 flex items-center gap-2">
                   <span className="font-bold">!</span> {error}
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-wait flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                     <Loader2 className="w-5 h-5 animate-spin" /> Processando...
-                  </>
-                ) : (
-                  formData.paymentMethod === 'pix' ? 'Gerar PIX e Pagar R$ 49' : 'Ir para Pagamento Seguro'
-                )}
-                {!isLoading && formData.paymentMethod === 'cartao' && <ExternalLink className="w-5 h-5" />}
-                {!isLoading && formData.paymentMethod === 'pix' && <Lock className="w-5 h-5" />}
-              </button>
-              
-              <div className="text-center text-xs text-gray-400 flex items-center justify-center gap-2 mt-4">
-                <Lock className="w-3 h-3" />
-                Pagamento processado em ambiente seguro (256-bit SSL).
-              </div>
-            </section>
-          </form>
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-gray-200">
+                  <Loader2 className="w-10 h-10 text-whatsapp animate-spin mb-4" />
+                  <p className="text-gray-500 font-medium">Gerando pagamento seguro...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Opção PIX */}
+                  <button 
+                    onClick={() => createPayment('pix')}
+                    className="w-full bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-whatsapp hover:shadow-md transition-all text-left flex items-center gap-4 group"
+                  >
+                    <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-whatsapp shrink-0">
+                      <QrCode className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-darkBlue text-lg group-hover:text-whatsapp transition-colors">PIX</h3>
+                      <p className="text-sm text-gray-500">Aprovação imediata • Liberado na hora</p>
+                    </div>
+                    <div className="text-right">
+                       <span className="block font-bold text-darkBlue">R$ 49,00</span>
+                       <ChevronRight className="w-5 h-5 text-gray-300 inline-block" />
+                    </div>
+                  </button>
+
+                  {/* Opção Cartão */}
+                  <button 
+                    onClick={() => createPayment('cartao')}
+                    className="w-full bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all text-left flex items-center gap-4 group"
+                  >
+                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 shrink-0">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-darkBlue text-lg group-hover:text-blue-600 transition-colors">Cartão de Crédito</h3>
+                      <p className="text-sm text-gray-500">Pague com segurança</p>
+                    </div>
+                    <div className="text-right">
+                       <span className="block font-bold text-darkBlue">R$ 49,00</span>
+                       <ChevronRight className="w-5 h-5 text-gray-300 inline-block" />
+                    </div>
+                  </button>
+                  
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mt-6">
+                    <Lock className="w-3 h-3" />
+                    Pagamento processado em ambiente 100% seguro.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </div>

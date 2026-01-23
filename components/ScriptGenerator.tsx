@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Wand2, Check, Copy, Clock, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Wand2, Check, Copy, Clock, RotateCcw, Trash2, FileText } from 'lucide-react';
 import { BusinessInfo, GeneratedScript, SavedScriptsData } from '../types';
 import { AuthenticatedHeader } from './AuthenticatedHeader';
+import { traduzirErro } from '../utils/errorUtils';
 
 interface ScriptGeneratorProps {
   onBack: () => void;
@@ -45,29 +46,50 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
   const [showSavedDataNotice, setShowSavedDataNotice] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Check for saved scripts AND saved form data on mount
+  // Priority Check: Saved Scripts > Saved Form Data
   useEffect(() => {
-    const savedFormData = localStorage.getItem('dadosGerador');
-    if (savedFormData) {
-      try {
-        const parsedData = JSON.parse(savedFormData);
-        setFormData({
-          businessType: parsedData.businessType || '',
-          businessName: parsedData.businessName || '',
-          whatYouDo: parsedData.whatYouDo || '',
-          hours: parsedData.hours || '',
-          closingMethod: parsedData.closingMethod || '',
-          differentiator: parsedData.differentiator || '',
-        });
-        
-        if (parsedData.customBusinessType) {
-          setCustomBusinessType(parsedData.customBusinessType);
-        }
+    // 1. Check for COMPLETED scripts first
+    const savedScriptsStr = localStorage.getItem('scriptsGerados');
+    let foundScripts = false;
 
-        setShowSavedDataNotice(true);
+    if (savedScriptsStr) {
+      try {
+        const parsed: SavedScriptsData = JSON.parse(savedScriptsStr);
+        if (parsed.scripts && parsed.scripts.length > 0) {
+            setFormData(parsed.formData);
+            setGeneratedScripts(parsed.scripts);
+            setStep('results'); // Direct jump to results
+            foundScripts = true;
+        }
       } catch (e) {
-        console.error("Erro ao carregar dados salvos", e);
+        console.error("Erro ao carregar scripts salvos", e);
       }
+    }
+
+    // 2. If no scripts found, check for DRAFT form data
+    if (!foundScripts) {
+        const savedFormData = localStorage.getItem('dadosGerador');
+        if (savedFormData) {
+          try {
+            const parsedData = JSON.parse(savedFormData);
+            setFormData({
+              businessType: parsedData.businessType || '',
+              businessName: parsedData.businessName || '',
+              whatYouDo: parsedData.whatYouDo || '',
+              hours: parsedData.hours || '',
+              closingMethod: parsedData.closingMethod || '',
+              differentiator: parsedData.differentiator || '',
+            });
+            
+            if (parsedData.customBusinessType) {
+              setCustomBusinessType(parsedData.customBusinessType);
+            }
+
+            setShowSavedDataNotice(true);
+          } catch (e) {
+            console.error("Erro ao carregar dados salvos", e);
+          }
+        }
     }
   }, []);
 
@@ -117,20 +139,13 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
     if (formStep > 0) {
       setFormStep(prev => prev - 1);
     } else {
-      setStep('intro');
-    }
-  };
-
-  const loadSavedScripts = () => {
-    const saved = localStorage.getItem('scriptsGerados');
-    if (saved) {
-      try {
-        const parsed: SavedScriptsData = JSON.parse(saved);
-        setFormData(parsed.formData);
-        setGeneratedScripts(parsed.scripts);
+      // If we are at step 0 of form
+      if (generatedScripts.length > 0) {
+        // If we have scripts, go back to results
         setStep('results');
-      } catch (e) {
-        console.error("Erro ao carregar scripts salvos", e);
+      } else {
+        // Otherwise go to intro
+        setStep('intro');
       }
     }
   };
@@ -220,7 +235,7 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
 
     } catch (error: any) {
       console.error("Erro ao gerar scripts:", error);
-      setErrorMessage(error.message || "Ocorreu um erro ao gerar os scripts. Por favor, tente novamente.");
+      setErrorMessage(traduzirErro(error.message));
       setStep('error');
     }
   };
@@ -387,15 +402,6 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
               >
                 Começar Agora <ArrowRight className="w-5 h-5" />
               </button>
-              
-              {localStorage.getItem('scriptsGerados') && (
-                <button 
-                  onClick={loadSavedScripts}
-                  className="text-gray-500 hover:text-darkBlue font-medium py-2 transition text-sm"
-                >
-                  Ver scripts gerados anteriormente
-                </button>
-              )}
             </div>
             
             <div className="mt-6 flex items-center gap-2 text-gray-400 text-xs">
@@ -414,6 +420,16 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
           >
              ← Voltar
           </button>
+          
+          {/* Button to go back to existing results */}
+          {generatedScripts.length > 0 && (
+             <button 
+              onClick={() => setStep('results')}
+              className="w-full mb-6 bg-green-50 text-green-700 border border-green-200 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-green-100 transition animate-fade-in"
+            >
+              <FileText className="w-4 h-4" /> Voltar para meus scripts salvos
+            </button>
+          )}
           
           {/* Saved Data Notice */}
           {showSavedDataNotice && (

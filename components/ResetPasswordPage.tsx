@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, ArrowRight, Loader2, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabase';
+import { traduzirErro } from '../utils/errorUtils';
 
 interface ResetPasswordPageProps {
   onSuccess: () => void;
@@ -37,6 +38,9 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onSuccess 
 
       if (updateError) throw updateError;
 
+      // Limpar a URL (remove o hash token de recovery) para segurança e estética
+      window.history.replaceState({}, document.title, window.location.pathname);
+
       setIsSuccess(true);
       
       // Wait a moment for the user to see the success message, then redirect
@@ -46,7 +50,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onSuccess 
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Erro ao redefinir senha. O link pode ter expirado.');
+      setError(traduzirErro(err.message));
       setIsLoading(false);
     }
   };
@@ -116,7 +120,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onSuccess 
           )}
 
           <button 
-            type="submit"
+            type="submit" 
             disabled={isLoading}
             className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 transform hover:-translate-y-0.5"
           >

@@ -10,25 +10,36 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onLogout, onNavigate }) => {
   const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    // Fetch User Email for Welcome Message
     const getUser = async () => {
+      // 1. Obter email da sessão ou localStorage
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
-        return;
-      }
+      const currentEmail = session?.user?.email || localStorage.getItem('userEmail') || localStorage.getItem('emailCompra') || '';
       
-      const storedEmail = localStorage.getItem('userEmail') || localStorage.getItem('emailCompra');
-      if (storedEmail) {
-        setUserEmail(storedEmail);
+      if (currentEmail) {
+        setUserEmail(currentEmail);
+
+        // 2. Buscar nome na tabela leads
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('nome')
+          .eq('email', currentEmail)
+          .maybeSingle();
+        
+        if (lead && lead.nome) {
+          setUserName(lead.nome);
+        } else {
+          // Fallback: Tenta localStorage, depois divide email
+          const localName = localStorage.getItem('nomeCliente');
+          const firstName = localName ? localName.split(' ')[0] : currentEmail.split('@')[0];
+          setUserName(firstName);
+        }
       }
     };
     getUser();
   }, []);
-
-  const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'Doutora';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,7 +51,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, onNavigate }) =>
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-darkBlue mb-2">Bem-vindo(a), {userNameDisplay}!</h1>
+          <h1 className="text-3xl font-bold text-darkBlue mb-2">Bem-vindo(a), {userName || 'Doutora'}!</h1>
           <p className="text-gray-500 text-lg">Escolha por onde começar a transformar o atendimento da sua clínica:</p>
         </div>
 

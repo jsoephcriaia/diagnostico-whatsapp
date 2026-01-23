@@ -1,5 +1,5 @@
 
-export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'create-account' | 'reset-password' | 'dashboard' | 'seven-steps' | 'generator' | 'examples' | 'ai-secretary';
+export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'create-account' | 'email-confirmation' | 'reset-password' | 'dashboard' | 'seven-steps' | 'generator' | 'examples' | 'ai-secretary' | 'access-reactivated';
 
 export interface QuizAnswers {
   contactsRange: string | number;
@@ -53,11 +53,11 @@ export interface SavedScriptsData {
 }
 
 export const CONTACT_RANGES = [
-  { label: 'Menos de 30', value: 'menos_30', avg: 20 },
-  { label: '30 a 50', value: '30_50', avg: 40 },
+  { label: 'Até 50', value: 'ate_50', avg: 35 },
   { label: '50 a 100', value: '50_100', avg: 75 },
-  { label: '100 a 200', value: '100_200', avg: 150 },
-  { label: 'Mais de 200', value: 'mais_200', avg: 250 },
+  { label: '100 a 150', value: '100_150', avg: 125 },
+  { label: '150 a 200', value: '150_200', avg: 175 },
+  { label: '200 a 300', value: '200_300', avg: 250 },
 ];
 
 export const TICKET_RANGES = [
@@ -66,14 +66,14 @@ export const TICKET_RANGES = [
   { label: 'R$ 300 a R$ 500', value: '300_500', avg: 400 },
   { label: 'R$ 500 a R$ 1.000', value: '500_1000', avg: 750 },
   { label: 'R$ 1.000 a R$ 2.000', value: '1000_2000', avg: 1500 },
-  { label: 'Acima de R$ 2.000', value: 'acima_2000', avg: 2500 },
+  { label: 'R$ 2.000 a R$ 3.000', value: '2000_3000', avg: 2500 },
 ];
 
 export const CONVERSION_RANGES = [
-  { label: '7 ou mais (ótimo!)', value: '7_mais', rate: 0.70 },
-  { label: '5 a 6', value: '5_6', rate: 0.55 },
-  { label: '3 a 4', value: '3_4', rate: 0.35 },
   { label: '1 a 2', value: '1_2', rate: 0.15 },
+  { label: '3 a 4', value: '3_4', rate: 0.35 },
+  { label: '5 a 6', value: '5_6', rate: 0.55 },
+  { label: '7 ou mais (ótimo!)', value: '7_mais', rate: 0.70 },
   { label: 'Quase nenhuma agenda', value: 'quase_nada', rate: 0.05 },
   { label: 'Não sei dizer', value: 'nao_sei', rate: 0.10 },
 ];

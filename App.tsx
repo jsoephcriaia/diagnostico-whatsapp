@@ -8,6 +8,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { PixPaymentPage } from './components/PixPaymentPage';
 import { CreateAccountPage } from './components/CreateAccountPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
+import { EmailConfirmationPage } from './components/EmailConfirmationPage';
 import { SuccessPage } from './components/SuccessPage';
 import { Dashboard } from './components/Dashboard';
 import { SevenSteps } from './components/SevenSteps';
@@ -15,6 +16,7 @@ import { ScriptGenerator } from './components/ScriptGenerator';
 import { NicheExamples } from './components/NicheExamples';
 import { AISecretaryPage } from './components/AISecretaryPage';
 import { LoginModal } from './components/LoginModal'; 
+import { AccessReactivatedPage } from './components/AccessReactivatedPage';
 import { ScreenState, QuizAnswers, CalculationResult, CONTACT_RANGES, TICKET_RANGES, PixPaymentData } from './types';
 import { supabase } from './supabase';
 
@@ -32,6 +34,10 @@ const App: React.FC = () => {
 
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginModalInitialView, setLoginModalInitialView] = useState<'login' | 'forgot-password'>('login');
+
+  // Controle de fluxo do checkout (etapa inicial)
+  const [checkoutStartStep, setCheckoutStartStep] = useState<'personal_data' | 'payment_method'>('personal_data');
 
   // Listener para navegação interna
   useEffect(() => {
@@ -49,18 +55,41 @@ const App: React.FC = () => {
     setSessionError(false);
     
     try {
-      // 1. Timeout de 8 segundos (conforme solicitado)
+      // 1. DETECÇÃO ROBUSTA DE PARÂMETROS DE URL (Hash e Query)
+      const hashStr = window.location.hash.substring(1); // Remove o #
+      const queryStr = window.location.search.substring(1); // Remove o ?
+      
+      const hashParams = new URLSearchParams(hashStr);
+      const queryParams = new URLSearchParams(queryStr);
+      
+      // Tenta pegar o type de qualquer lugar
+      const type = hashParams.get('type') || queryParams.get('type');
+      
+      console.log('URL Check - Type:', type);
+
+      // Se for recuperação de senha
+      if (type === 'recovery') {
+        console.log('Modo Recovery detectado via URL');
+        return 'reset-password';
+      }
+
+      // Se for confirmação de email ou signup
+      if (type === 'signup' || type === 'email_confirmation' || type === 'invite') {
+         console.log('Modo Signup detectado via URL');
+         // Damos um pequeno delay para garantir que a sessão foi estabelecida pelo Supabase
+         setTimeout(() => {
+           setScreen('create-account');
+         }, 500);
+         return; // Retorna undefined para não mudar o state imediatamente aqui, o timeout cuidará disso
+      }
+
+      // 2. Timeout de 8 segundos (conforme solicitado)
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 8000)
       );
 
-      // 2. Lógica de Verificação
+      // 3. Lógica de Verificação Padrão de Sessão
       const checkLogic = async () => {
-        // Prioridade: Recuperação de Senha via URL
-        if (window.location.hash && window.location.hash.includes('type=recovery')) {
-          return 'reset-password';
-        }
-
         // Verificar Sessão no Supabase
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -70,7 +99,6 @@ const App: React.FC = () => {
         }
 
         // Verificar Pagamento (Leads)
-        // Usamos maybeSingle para não estourar erro se não achar (embora deva achar)
         const { data: lead, error: leadError } = await supabase
           .from('leads')
           .select('pagou')
@@ -94,8 +122,15 @@ const App: React.FC = () => {
       };
 
       // Corrida: Lógica vs Timeout
-      const nextScreen = await Promise.race([checkLogic(), timeoutPromise]) as ScreenState;
-      setScreen(nextScreen);
+      const result = await Promise.race([checkLogic(), timeoutPromise]);
+      
+      // Se retornou uma tela válida (string), atualiza
+      if (typeof result === 'string') {
+        // Evita sobrescrever se o timeout do signup já estiver rodando
+        if (screen !== 'create-account') {
+          setScreen(result as ScreenState);
+        }
+      }
 
     } catch (error: any) {
       console.warn("Erro na verificação de sessão:", error);
@@ -108,20 +143,35 @@ const App: React.FC = () => {
     }
   };
 
-  // Inicialização
+  // Inicialização e Listeners de Auth
   useEffect(() => {
+    // Roda a verificação inicial
     checkSession();
 
-    // Listener de Auth apenas para mudanças DEPOIS do load inicial
+    // Listener de Auth para eventos em tempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
+      console.log('Auth Event:', event);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('Evento PASSWORD_RECOVERY recebido');
+        setScreen('reset-password');
+        setIsCheckingSession(false); // Garante que sai do loading
+      }
+      
+      else if (event === 'SIGNED_OUT') {
         localStorage.removeItem('acessoLiberado');
         localStorage.removeItem('userEmail');
-        // Só redireciona se não estivermos verificando sessão (evita race condition)
         setScreen('landing');
       } 
-      // Não tratamos SIGNED_IN aqui para evitar conflito com checkSession,
-      // o LoginModal já fecha e a verificação inicial cuida do resto.
+      
+      else if (event === 'SIGNED_IN') {
+        // Se acabou de logar e tem type=recovery na URL, força a tela de reset
+        // Isso previne que a verificação de sessão redirecione para o dashboard
+        const hash = window.location.hash;
+        if (hash && hash.includes('type=recovery')) {
+           setScreen('reset-password');
+        }
+      }
     });
 
     return () => {
@@ -206,11 +256,16 @@ const App: React.FC = () => {
     setScreen('email');
   };
 
-  const handleEmailSubmit = async (email: string, phone: string) => {
+  const handleEmailSubmit = async (name: string, email: string, phone: string) => {
     if (!answers) return;
     setUserEmail(email);
     setUserPhone(phone);
     setIsLoading(true);
+    
+    // Salvar nome no localStorage para o checkout
+    localStorage.setItem('nomeCliente', name);
+    localStorage.setItem('emailCliente', email);
+    localStorage.setItem('whatsappCliente', phone.replace(/\D/g, ''));
     
     const calculation = calculateResult(answers);
     setResult(calculation);
@@ -228,6 +283,7 @@ const App: React.FC = () => {
     const conversionManual = typeof answers.conversionRate === 'number';
     
     const leadData = {
+      nome: name,
       email,
       whatsapp: phone.replace(/\D/g, ''),
       etapa: 'diagnostico_gratis',
@@ -272,38 +328,61 @@ const App: React.FC = () => {
   };
 
   const handlePaymentConfirmed = async () => {
-    if (supabase && userEmail) {
+    const emailFinal = userEmail || localStorage.getItem('emailCompra') || '';
+    const nomeFinal = localStorage.getItem('nomeCliente') || '';
+
+    if (supabase && emailFinal) {
+      // 1. Atualizar lead como pago e COM O NOME
+      const updateData: any = { 
+        pagou: true,
+        data_pagamento: new Date().toISOString()
+      };
+      
+      // Só atualiza o nome se ele existir no localStorage
+      if (nomeFinal) {
+        updateData.nome = nomeFinal;
+      }
+
       await supabase
         .from('leads')
-        .update({ 
-          pagou: true,
-          data_pagamento: new Date().toISOString()
-        })
-        .eq('email', userEmail);
-    }
-
-    // Enviar email de confirmação de compra
-    try {
-      const emailFinal = userEmail || localStorage.getItem('emailCompra') || '';
-      const nomeCliente = localStorage.getItem('nomeCliente') || '';
+        .update(updateData)
+        .eq('email', emailFinal);
       
-      if (emailFinal) {
-        await fetch('https://wlpqifxosgeoiofmjbsa.supabase.co/functions/v1/enviar-email-compra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      // 2. Verificar se usuário já existe e criar se não existir
+      try {
+         const { error: signUpError } = await supabase.auth.signUp({
             email: emailFinal,
-            nome: nomeCliente
-          })
-        });
-        console.log('Email de confirmação de compra enviado');
+            password: Math.random().toString(36).slice(-12), // Senha temporária
+            options: {
+               emailRedirectTo: window.location.origin
+            }
+         });
+         
+         if (signUpError) {
+           console.warn("Resultado do signUp:", signUpError.message);
+           
+           // SE USUÁRIO JÁ EXISTE (erro comum: 'User already registered' ou similar)
+           if (signUpError.message.toLowerCase().includes('already') || signUpError.message.toLowerCase().includes('registered')) {
+              setScreen('access-reactivated');
+              window.scrollTo(0,0);
+              return; // Para aqui e não vai para email-confirmation
+           }
+         }
+      } catch (e) {
+         console.error("Erro no fluxo de verificação de usuário:", e);
       }
-    } catch (error) {
-      console.error('Erro ao enviar email de confirmação:', error);
-      // Não bloquear o fluxo se der erro no email
     }
 
-    setScreen('create-account');
+    // 3. Se usuário foi criado agora (ou não deu erro de duplicidade), mostra tela de confirmação de email
+    setScreen('email-confirmation');
+    window.scrollTo(0,0);
+  };
+
+  const handleChangePaymentMethod = () => {
+    setCheckoutStartStep('payment_method');
+    setPixData(null);
+    localStorage.removeItem('cobrancaId');
+    setScreen('checkout');
     window.scrollTo(0,0);
   };
 
@@ -334,7 +413,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Botão de Sair na tela de erro
   const handleForceLogout = async () => {
     localStorage.clear();
     await supabase.auth.signOut();
@@ -398,10 +476,10 @@ const App: React.FC = () => {
     <div className="font-sans antialiased text-gray-900">
       
       <LoginModal 
-        isOpen={isLoginModalOpen} 
+        isOpen={isLoginModalOpen}
+        initialView={loginModalInitialView}
         onClose={() => {
            setIsLoginModalOpen(false);
-           // Quando fecha o modal após login, verifica sessão novamente para atualizar tela
            checkSession();
         }} 
       />
@@ -409,7 +487,10 @@ const App: React.FC = () => {
       {screen === 'landing' && (
         <LandingPage 
           onStart={() => setScreen('quiz')} 
-          onLoginClick={() => setIsLoginModalOpen(true)}
+          onLoginClick={() => {
+            setLoginModalInitialView('login');
+            setIsLoginModalOpen(true);
+          }}
         />
       )}
       
@@ -431,6 +512,7 @@ const App: React.FC = () => {
         <ResultPage 
           result={result} 
           onCheckout={() => {
+            setCheckoutStartStep('personal_data');
             setScreen('checkout');
             window.scrollTo(0,0);
           }}
@@ -441,6 +523,7 @@ const App: React.FC = () => {
         <CheckoutPage 
           initialEmail={userEmail}
           initialPhone={userPhone}
+          initialStep={checkoutStartStep}
           onPixCreated={handlePixCreated}
           onBack={() => setScreen('result')}
         />
@@ -450,6 +533,26 @@ const App: React.FC = () => {
         <PixPaymentPage 
           data={pixData}
           onPaymentConfirmed={handlePaymentConfirmed}
+          onChangePaymentMethod={handleChangePaymentMethod}
+        />
+      )}
+
+      {screen === 'email-confirmation' && (
+        <EmailConfirmationPage
+          email={userEmail || localStorage.getItem('emailCompra') || ''}
+        />
+      )}
+      
+      {screen === 'access-reactivated' && (
+        <AccessReactivatedPage
+          onLogin={() => {
+             setLoginModalInitialView('login');
+             setIsLoginModalOpen(true);
+          }}
+          onForgotPassword={() => {
+             setLoginModalInitialView('forgot-password');
+             setIsLoginModalOpen(true);
+          }}
         />
       )}
 
