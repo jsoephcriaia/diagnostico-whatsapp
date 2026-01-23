@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { maskPhone } from '../utils/paymentUtils';
 
 interface EmailCaptureProps {
-  onSubmit: (email: string) => void;
+  onSubmit: (email: string, phone: string) => void;
   isLoading: boolean;
 }
 
 export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading }) => {
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
 
   const validateEmail = (email: string) => {
@@ -18,14 +20,27 @@ export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading 
       );
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(maskPhone(e.target.value));
+    setError('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!validateEmail(email)) {
       setError('Por favor, digite um email válido.');
       return;
     }
+
+    const rawPhone = phone.replace(/\D/g, '');
+    if (rawPhone.length < 10) {
+      setError('Por favor, digite um WhatsApp válido (com DDD).');
+      return;
+    }
+
     setError('');
-    onSubmit(email);
+    onSubmit(email, phone);
   };
 
   return (
@@ -36,34 +51,51 @@ export const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, isLoading 
         </div>
 
         <h2 className="text-2xl font-bold text-darkBlue mb-2">
-          Seu diagnóstico está pronto!
+          O diagnóstico da sua clínica está pronto!
         </h2>
         <p className="text-slateText mb-8">
-          Para ver seu resultado detalhado e quanto você está perdendo, me diz onde posso te enviar uma cópia:
+          Informe seus dados para ver quanto sua clínica está perdendo:
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="text-left">
-            <input
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError('');
-              }}
-              disabled={isLoading}
-              className={`w-full p-4 rounded-lg border-2 bg-gray-50 focus:bg-white transition-colors outline-none text-lg ${
-                error ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-whatsapp'
-              }`}
-            />
-            {error && <p className="text-red-500 text-sm mt-1 ml-1">{error}</p>}
+          <div className="text-left space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                disabled={isLoading}
+                className="w-full p-4 rounded-lg border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-whatsapp transition-colors outline-none text-lg"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+              <input
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={phone}
+                onChange={handlePhoneChange}
+                disabled={isLoading}
+                maxLength={15}
+                className="w-full p-4 rounded-lg border-2 bg-gray-50 focus:bg-white border-gray-200 focus:border-whatsapp transition-colors outline-none text-lg"
+                required
+              />
+            </div>
+
+            {error && <p className="text-red-500 text-sm mt-1 ml-1 font-medium">{error}</p>}
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
           >
             {isLoading ? 'Calculando...' : 'Ver Meu Resultado'} 
             {!isLoading && <ArrowRight className="w-5 h-5" />}

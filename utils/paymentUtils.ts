@@ -1,3 +1,4 @@
+
 export const maskCPF = (value: string) => {
   return value
     .replace(/\D/g, '')
@@ -5,6 +6,23 @@ export const maskCPF = (value: string) => {
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d{1,2})/, '$1-$2')
     .replace(/(-\d{2})\d+?$/, '$1');
+};
+
+export const maskPhone = (value: string) => {
+  let r = value.replace(/\D/g, '');
+  if (r.length > 11) r = r.substring(0, 11);
+  
+  if (r.length > 10) {
+    // 11 digits: (XX) XXXXX-XXXX
+    return r.replace(/^(\d\d)(\d{5})(\d{4}).*/, '($1) $2-$3');
+  } else if (r.length > 5) {
+    // 10 digits (landline or typing): (XX) XXXX-XXXX
+    return r.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+  } else if (r.length > 2) {
+    return r.replace(/^(\d\d)(\d{0,5})/, '($1) $2');
+  } else {
+    return r.replace(/^(\d*)/, '($1');
+  }
 };
 
 export const maskCardNumber = (value: string) => {

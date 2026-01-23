@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <title>Diagnóstico WhatsApp</title>
+    <title>Diagnóstico WhatsApp para Clínicas de Estética</title>
+    <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/2044px-WhatsApp.svg.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,14 +24,25 @@
               darkBlue: '#0f172a',
               slateText: '#374151',
               neonGreen: '#39ff14',
+              // New Aesthetic Palette
+              'aesthetic-gold': '#c9a87c',      // Rose/dourado - badges, destaques
+              'aesthetic-rose': '#d4a59a',      // Rose suave - ícones
+              'aesthetic-bg': '#fdf8f7',        // Rosa bem claro - cards
+              'aesthetic-bg-light': '#fef5f3',  // Rosa claro - seções
+              'aesthetic-link': '#b8927a',      // Rose escuro - links
             },
             animation: {
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
               'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
               'pop-in': 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
               'slide-in-right': 'slideInRight 0.8s ease-out forwards',
               'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
               fadeInUp: {
                 '0%': { opacity: '0', transform: 'translateY(20px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },

@@ -12,21 +12,29 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
   };
 
+  const getDiagnosticText = () => {
+    if (result.mainProblem === 'tempo_resposta') {
+      return 'O principal problema da sua clínica é o tempo de resposta. Clientes de estética pesquisam 3, 4 clínicas ao mesmo tempo. A que responde primeiro geralmente é a que agenda. Enquanto você demora para responder, sua concorrente já marcou a avaliação.';
+    } else {
+      return 'Muita gente pergunta, pouca gente agenda. O problema não é falta de interesse — é falta de um processo para transformar curiosidade em agendamento. A maioria das clínicas perde a cliente entre o "quanto custa?" e o "quero agendar".';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
+    <div className="min-h-screen bg-aesthetic-bg pb-32">
       {/* Header Result */}
       <div className="bg-darkBlue pt-12 pb-24 px-4 text-center">
         <h1 className="text-white text-2xl md:text-3xl font-semibold opacity-90 mb-2">Diagnóstico Finalizado</h1>
-        <p className="text-gray-300 text-sm md:text-base">Baseado nas suas respostas</p>
+        <p className="text-gray-300 text-sm md:text-base">Baseado nos dados da sua clínica</p>
       </div>
 
       <div className="max-w-xl mx-auto px-4 -mt-16 space-y-8">
         
-        {/* Section 1: Impact (Hierarquia Invertida) */}
+        {/* Section 1: Impact */}
         <div className="bg-white rounded-2xl shadow-lg border border-red-100 overflow-hidden relative">
           <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
           <div className="p-6 md:p-8 text-center">
-            <h2 className="text-lg md:text-xl text-slateText font-medium mb-4">Você está perdendo aproximadamente:</h2>
+            <h2 className="text-lg md:text-xl text-slateText font-medium mb-4">Sua clínica está deixando na mesa aproximadamente:</h2>
             
             {/* Annual (Main Highlight) */}
             <div className="text-4xl md:text-6xl font-extrabold text-red-600 mb-2 tracking-tight">
@@ -50,13 +58,11 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
           <div className="bg-orange-50 rounded-lg p-6 border border-orange-100">
             <h4 className="font-bold text-orange-800 text-lg mb-2">
               {result.mainProblem === 'tempo_resposta' 
-                ? 'Tempo de Resposta Lento' 
-                : 'Falta de Processo de Venda'}
+                ? 'Tempo de Resposta' 
+                : 'Conversão (Agendamento)'}
             </h4>
             <p className="text-orange-900/80 leading-relaxed text-base md:text-lg">
-              {result.mainProblem === 'tempo_resposta' 
-                ? 'Clientes estão indo para o concorrente enquanto esperam sua resposta. A velocidade é o fator #1 para vendas no WhatsApp.'
-                : 'Você conversa muito mas fecha pouco. Falta um script validado que conduza o cliente do "oi" até o pagamento.'}
+              {getDiagnosticText()}
             </p>
           </div>
         </div>
@@ -84,13 +90,13 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
              {[
-               { icon: BookOpen, text: "Os 7 passos do atendimento que converte" },
-               { icon: MessageSquare, text: "Gerador de Scripts personalizados" },
-               { icon: ExternalLink, text: "Exemplos prontos para seu nicho" },
-               { icon: TrendingUp, text: "Aumento imediato de conversão" }
+               { icon: BookOpen, text: "Os 7 passos para transformar mensagem em agendamento" },
+               { icon: MessageSquare, text: "Scripts prontos para os procedimentos mais pedidos" },
+               { icon: AlertTriangle, text: "Como responder \"quanto custa?\" sem perder a cliente" },
+               { icon: CheckCircle, text: "Técnicas de follow-up que recuperam quem sumiu" }
              ].map((item, idx) => (
                <div key={idx} className="p-5 flex items-center gap-4">
-                 <CheckCircle className="w-6 h-6 text-whatsapp shrink-0" />
+                 <item.icon className="w-6 h-6 text-aesthetic-rose shrink-0" />
                  <span className="text-slateText font-medium text-base md:text-lg">{item.text}</span>
                </div>
              ))}
@@ -104,7 +110,8 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
         {/* Section 5: Offer Card (Sticky on Mobile via Container) */}
         <div className="bg-darkBlue rounded-2xl p-1 shadow-xl overflow-hidden">
           <div className="bg-gradient-to-br from-whatsapp to-whatsappDark p-6 md:p-8 text-white text-center rounded-xl">
-             <h3 className="text-2xl font-bold mb-2">Protocolo de Atendimento</h3>
+             <h3 className="text-2xl font-bold mb-2">Protocolo para Clínicas de Estética</h3>
+             <p className="text-blue-100 text-sm mb-4 font-medium uppercase tracking-wider">Pare de perder clientes no WhatsApp</p>
              <div className="flex items-center justify-center gap-3 mb-6">
                 <span className="text-blue-100 line-through text-xl">R$ 97</span>
                 <span className="text-5xl font-extrabold">R$ 49</span>
@@ -112,14 +119,10 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
              
              <button 
               onClick={onCheckout}
-              className="w-full bg-white text-whatsappDark font-bold text-xl py-4 rounded-lg shadow-lg hover:bg-gray-100 transition-colors mb-4 uppercase tracking-wide"
+              className="w-full bg-white text-whatsappDark font-bold text-xl py-4 rounded-lg shadow-lg hover:bg-gray-100 transition-colors mb-2 uppercase tracking-wide"
              >
                Quero Resolver Agora →
              </button>
-
-             <p className="text-white/80 text-sm font-medium">
-               🔒 7 dias de garantia. Risco zero.
-             </p>
           </div>
         </div>
         
@@ -127,7 +130,7 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
         <div className="pb-8 flex items-start justify-center gap-2 text-red-600">
           <AlertOctagon className="w-6 h-6 shrink-0 mt-0.5" />
           <p className="text-center font-bold text-lg md:text-xl leading-tight">
-             Enquanto você decide, os {formatCurrency(result.monthlyLoss)} continuam sendo perdidos...
+             Cada dia que passa são clientes escolhendo a concorrente.
           </p>
         </div>
 
@@ -139,7 +142,7 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onCheckout }) =>
           onClick={onCheckout}
           className="w-full bg-whatsapp text-white font-bold py-3 rounded-lg shadow-md text-lg"
         >
-          Parar de Perder Dinheiro
+          Parar de Perder Clientes
         </button>
       </div>
     </div>

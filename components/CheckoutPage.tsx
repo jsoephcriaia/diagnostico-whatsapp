@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Lock, CreditCard, QrCode, CheckCircle, ArrowLeft, Loader2, ExternalLink } from 'lucide-react';
-import { maskCPF, validateCPF } from '../utils/paymentUtils';
+import { maskCPF, maskPhone, validateCPF } from '../utils/paymentUtils';
 import { PixPaymentData } from '../types';
 
 interface CheckoutPageProps {
   initialEmail: string;
+  initialPhone?: string;
   onPixCreated: (data: PixPaymentData) => void;
   onBack: () => void;
 }
 
-export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixCreated, onBack }) => {
+export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initialPhone, onPixCreated, onBack }) => {
   const [formData, setFormData] = useState({
     name: '',
     cpf: '',
     email: initialEmail,
+    whatsapp: initialPhone || '',
     paymentMethod: 'pix' as 'pix' | 'cartao',
   });
 
@@ -25,6 +27,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
     let formattedValue = value;
 
     if (name === 'cpf') formattedValue = maskCPF(value);
+    if (name === 'whatsapp') formattedValue = maskPhone(value);
 
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
     setError('');
@@ -37,6 +40,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
     // Basic Validation
     if (formData.name.length < 3) return setError('Digite seu nome completo.');
     if (!validateCPF(formData.cpf)) return setError('CPF inválido.');
+    const rawPhone = formData.whatsapp.replace(/\D/g, '');
+    if (rawPhone.length < 10) return setError('WhatsApp inválido (digite com DDD).');
     
     setIsLoading(true);
 
@@ -50,6 +55,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
           nome: formData.name,
           cpf: formData.cpf.replace(/\D/g, ''), // Remove mask (dots and dash)
           email: formData.email,
+          whatsapp: rawPhone,
           formaPagamento: formData.paymentMethod
         })
       });
@@ -108,17 +114,16 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
             
             <div className="flex justify-between items-start pb-4 border-b border-gray-100">
               <div>
-                <h4 className="font-medium text-slateText">Protocolo de Atendimento</h4>
+                <h4 className="font-medium text-slateText">Protocolo para Estética</h4>
                 <p className="text-sm text-gray-500">Acesso Vitalício</p>
               </div>
               <span className="font-bold text-darkBlue">R$ 49,00</span>
             </div>
 
             <ul className="space-y-3 py-4 text-sm text-gray-600">
-              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-whatsapp" /> 7 passos do atendimento</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-whatsapp" /> Gerador de scripts</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-whatsapp" /> Exemplos por nicho</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-whatsapp" /> 7 dias de garantia</li>
+              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-aesthetic-rose" /> 7 passos do atendimento</li>
+              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-aesthetic-rose" /> Gerador de scripts</li>
+              <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-aesthetic-rose" /> Exemplos por nicho</li>
             </ul>
 
             <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-2">
@@ -177,6 +182,20 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, onPixC
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                  <input
+                    type="tel"
+                    name="whatsapp"
+                    value={formData.whatsapp}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white text-darkBlue focus:border-whatsapp focus:ring-1 focus:ring-whatsapp outline-none transition"
+                    placeholder="(11) 99999-9999"
+                    maxLength={15}
                     required
                   />
                 </div>

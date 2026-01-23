@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Copy, Check, Info, ArrowRight, Stethoscope, Briefcase, GraduationCap, Wrench, ShoppingBag } from 'lucide-react';
+import { AuthenticatedHeader } from './AuthenticatedHeader';
 
 interface NicheExamplesProps {
   onBack: () => void;
   onGoToGenerator: () => void;
+  onLogout: () => void;
 }
 
 const NICHES = [
-  { id: 'clinica', label: 'Clínica / Consultório', icon: Stethoscope },
+  { id: 'clinica', label: 'Clínica de Estética', icon: Stethoscope },
   { id: 'escritorio', label: 'Escritório', icon: Briefcase },
   { id: 'escola', label: 'Escola / Curso', icon: GraduationCap },
   { id: 'servico', label: 'Prestador de Serviço', icon: Wrench },
@@ -232,7 +234,7 @@ const SCRIPTS_BY_NICHE: Record<string, { title: string; versions: { label?: stri
   ]
 };
 
-export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGenerator }) => {
+export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGenerator, onLogout }) => {
   const [selectedNiche, setSelectedNiche] = useState('clinica');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -246,23 +248,11 @@ export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGene
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button 
-            onClick={onBack}
-            className="text-gray-500 hover:text-darkBlue hover:bg-gray-100 p-2 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-lg md:text-xl font-bold text-darkBlue">
-              Exemplos por Nicho
-            </h1>
-            <p className="text-xs text-gray-500">Scripts prontos para copiar e adaptar</p>
-          </div>
-        </div>
-      </header>
+      <AuthenticatedHeader 
+        currentPage="Exemplos por Nicho"
+        onNavigateToDashboard={onBack}
+        onLogout={onLogout}
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         

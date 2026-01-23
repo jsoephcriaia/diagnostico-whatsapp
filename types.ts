@@ -1,4 +1,5 @@
-export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'create-account' | 'reset-password' | 'dashboard' | 'seven-steps' | 'generator' | 'examples';
+
+export type ScreenState = 'landing' | 'quiz' | 'email' | 'result' | 'checkout' | 'pix' | 'success' | 'create-account' | 'reset-password' | 'dashboard' | 'seven-steps' | 'generator' | 'examples' | 'ai-secretary';
 
 export interface QuizAnswers {
   contactsRange: string | number;
@@ -54,23 +55,25 @@ export const CONTACT_RANGES = [
   { label: '30 a 50', value: '30_50', avg: 40 },
   { label: '50 a 100', value: '50_100', avg: 75 },
   { label: '100 a 200', value: '100_200', avg: 150 },
+  { label: 'Mais de 200', value: 'mais_200', avg: 250 },
 ];
 
 export const TICKET_RANGES = [
-  { label: 'Menos de R$100', value: 'menos_100', avg: 70 },
-  { label: 'R$100 a R$300', value: '100_300', avg: 200 },
-  { label: 'R$300 a R$500', value: '300_500', avg: 400 },
-  { label: 'R$500 a R$1.000', value: '500_1000', avg: 750 },
-  { label: 'R$1.000 a R$2.000', value: '1000_2000', avg: 1500 },
+  { label: 'Até R$ 150 (procedimentos simples)', value: 'ate_150', avg: 100 },
+  { label: 'R$ 150 a R$ 300', value: '150_300', avg: 225 },
+  { label: 'R$ 300 a R$ 500', value: '300_500', avg: 400 },
+  { label: 'R$ 500 a R$ 1.000', value: '500_1000', avg: 750 },
+  { label: 'R$ 1.000 a R$ 2.000', value: '1000_2000', avg: 1500 },
+  { label: 'Acima de R$ 2.000', value: 'acima_2000', avg: 2500 },
 ];
 
 export const CONVERSION_RANGES = [
-  { label: 'A cada 3 contatos (33%)', value: 'cada_3', rate: 0.33 },
-  { label: 'A cada 5 contatos (20%)', value: 'cada_5', rate: 0.20 },
-  { label: 'A cada 10 contatos (10%)', value: 'cada_10', rate: 0.10 },
-  { label: 'A cada 15 contatos (7%)', value: 'cada_15', rate: 0.07 },
-  { label: 'A cada 20 contatos (5%)', value: 'cada_20', rate: 0.05 },
-  { label: 'A cada 30 contatos (3%)', value: 'cada_30_mais', rate: 0.03 },
+  { label: '7 ou mais (ótimo!)', value: '7_mais', rate: 0.70 },
+  { label: '5 a 6', value: '5_6', rate: 0.55 },
+  { label: '3 a 4', value: '3_4', rate: 0.35 },
+  { label: '1 a 2', value: '1_2', rate: 0.15 },
+  { label: 'Quase nenhuma agenda', value: 'quase_nada', rate: 0.05 },
+  { label: 'Não sei dizer', value: 'nao_sei', rate: 0.10 },
 ];
 
 export const RESPONSE_TIMES = [

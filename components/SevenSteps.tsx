@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, Copy, Check, ArrowRight, BookOpen, Lightbulb, Clock, Smartphone } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Check, ArrowRight, BookOpen, Lightbulb, Clock, Smartphone } from 'lucide-react';
+import { AuthenticatedHeader } from './AuthenticatedHeader';
 
 interface SevenStepsProps {
   onBack: () => void;
   onNavigateToGenerator: () => void;
+  onLogout: () => void;
 }
 
 const steps = [
   {
     id: 1,
     title: "Resposta Imediata",
-    problem: "Cliente manda mensagem e você demora pra responder. Quando responde, ele já foi pro concorrente.",
-    solution: "Responder rápido NÃO significa resolver rápido. Significa reconhecer que viu a mensagem.",
-    example: "Oi! Já vi sua mensagem 😊\nVou te responder certinho em instantes.",
+    problem: "Cliente manda mensagem sobre um procedimento e você demora. Quando responde, ela já marcou em outro lugar.",
+    solution: "Responder rápido NÃO significa ficar 24h no celular. Significa automatizar a primeira resposta.",
+    example: "Oi! Aqui é da [Nome da Clínica] 😊\nJá vi sua mensagem! Me conta o que você está buscando que já te ajudo.",
     implementationTime: "2 minutos",
     implementation: (
       <div className="space-y-4">
         <div>
-          <strong className="block text-darkBlue mb-1">Opção 1: Mensagem automática no WhatsApp Business (Recomendado)</strong>
+          <strong className="block text-darkBlue mb-1">Opção 1: Mensagem de Ausência (Para quando estiver fechado)</strong>
+          <div className="bg-gray-100 p-2 rounded text-sm text-gray-700 italic mb-2">
+            "Oi! Que bom que você entrou em contato com a [Nome da Clínica] 😊<br/><br/>
+            Nosso horário de atendimento é de segunda a sexta das 9h às 19h e sábado das 9h às 14h.<br/><br/>
+            Mas pode me contar o que você precisa que amanhã bem cedo já te respondo!"
+          </div>
           <ol className="list-decimal list-inside text-gray-600 space-y-1 text-sm">
             <li>Abra o WhatsApp Business</li>
             <li>Vá em <strong>Configurações</strong> → <strong>Ferramentas comerciais</strong> → <strong>Mensagem de ausência</strong></li>
@@ -26,11 +33,13 @@ const steps = [
           </ol>
         </div>
         <div>
-          <strong className="block text-darkBlue mb-1">Opção 2: Mensagem de saudação automática</strong>
+          <strong className="block text-darkBlue mb-1">Opção 2: Mensagem de Saudação</strong>
+          <div className="bg-gray-100 p-2 rounded text-sm text-gray-700 italic mb-2">
+             "Oi! Aqui é da [Nome da Clínica] 😊 Já vi sua mensagem! Me conta o que você está buscando que já te ajudo."
+          </div>
           <ol className="list-decimal list-inside text-gray-600 space-y-1 text-sm">
             <li>Vá em <strong>Configurações</strong> → <strong>Ferramentas comerciais</strong> → <strong>Mensagem de saudação</strong></li>
             <li>Cole o script de boas-vindas</li>
-            <li>Será enviada automaticamente quando alguém te chamar pela primeira vez</li>
           </ol>
         </div>
       </div>
@@ -39,9 +48,9 @@ const steps = [
   {
     id: 2,
     title: "Expectativa Clara",
-    problem: "Cliente não sabe como funciona seu atendimento e fica perdido ou frustrado.",
-    solution: "Explicar como funciona logo no início. Cliente com expectativa certa = cliente satisfeito.",
-    example: "Aqui funciona assim:\n\n1. Vou entender o que você precisa\n2. Tiro suas dúvidas\n3. Se fizer sentido, te explico o próximo passo\n\nPode ser?",
+    problem: "Cliente não entende como funciona e fica perdida ou ansiosa.",
+    solution: "Explicar como funciona logo no início. Cliente segura é cliente que agenda.",
+    example: "Oi [Nome]! Tudo bem?\n\nVou te explicar direitinho como funciona:\n1. Primeiro entendo o que você está buscando\n2. Te explico como o procedimento funciona e os resultados esperados\n3. Se fizer sentido, a gente agenda sua avaliação\n\nPode ser assim?",
     implementationTime: "2 minutos",
     implementation: (
       <div className="space-y-3">
@@ -52,130 +61,63 @@ const steps = [
           <li>Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/inicio</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/ola</code></li>
           <li>Cole o script de expectativa</li>
         </ol>
-        <p className="text-sm text-gray-500 italic bg-white p-2 rounded border border-gray-200">
-          <strong>Dica:</strong> Crie um atalho fácil de lembrar. Toda vez que iniciar uma conversa, digite o atalho.
-        </p>
       </div>
     )
   },
   {
     id: 3,
-    title: "Pergunta Certa",
-    problem: "Você gasta tempo igual com todo mundo, inclusive com quem nunca ia comprar.",
-    solution: "Fazer 1-2 perguntas que revelam se a pessoa está pronta pra comprar ou só pesquisando.",
-    example: "Só pra te ajudar melhor: você está buscando isso pra agora ou ainda está pesquisando opções?",
+    title: "Pergunta de Qualificação",
+    problem: "Você gasta tempo explicando tudo para quem só está curioso e não vai agendar.",
+    solution: "Fazer uma pergunta estratégica antes de passar preço.",
+    example: "Me conta: você já fez esse tipo de procedimento antes ou seria a primeira vez?",
     implementationTime: "3 minutos",
     implementation: (
       <div className="space-y-4">
         <div>
-          <p className="text-gray-600 text-sm mb-2"><strong>Criar Resposta Rápida de qualificação:</strong></p>
+          <p className="text-gray-600 text-sm mb-2"><strong>Variação importante:</strong></p>
+          <div className="bg-gray-100 p-2 rounded text-sm text-gray-700 italic mb-2">
+            "Você está querendo agendar pra essa semana ou ainda está pesquisando pra decidir?"
+          </div>
+          <p className="text-gray-600 text-sm mb-2"><strong>Criar Resposta Rápida:</strong></p>
           <ul className="list-disc list-inside text-gray-600 space-y-1 text-sm">
-            <li>Vá em Respostas rápidas no WhatsApp Business</li>
-            <li>Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/qualifica</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/pergunta</code></li>
-            <li>Cole a pergunta de qualificação</li>
+            <li>Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/qualifica</code></li>
+            <li>Cole a pergunta</li>
           </ul>
-        </div>
-        
-        <div className="bg-white rounded border border-gray-200 overflow-hidden">
-          <p className="bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 uppercase">Como interpretar as respostas</p>
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
-                <th className="px-3 py-2 font-medium">Resposta</th>
-                <th className="px-3 py-2 font-medium">Significado</th>
-                <th className="px-3 py-2 font-medium">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr>
-                <td className="px-3 py-2 text-gray-700">"Preciso urgente"</td>
-                <td className="px-3 py-2 text-red-500 font-bold">🔥 Quente</td>
-                <td className="px-3 py-2 text-gray-600">Prioridade máxima</td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2 text-gray-700">"Essa semana/mês"</td>
-                <td className="px-3 py-2 text-yellow-600 font-bold">🟡 Morno</td>
-                <td className="px-3 py-2 text-gray-600">Conduzir normalmente</td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2 text-gray-700">"Só pesquisando"</td>
-                <td className="px-3 py-2 text-blue-500 font-bold">🔵 Frio</td>
-                <td className="px-3 py-2 text-gray-600">Educar sem pressionar</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     )
   },
   {
     id: 4,
-    title: "Apresentação Simples",
-    problem: "Você manda textão explicando tudo, cliente não lê e some.",
-    solution: "Explicar seu serviço em 3-4 linhas usando a fórmula: Problema → Solução → Resultado",
-    example: "A gente ajuda negócios que perdem vendas por demora no WhatsApp.\nFunciona assim: o cliente chama, é atendido na hora, e sua equipe só fala com quem quer fechar.\nResultado: você não perde mais contato por demora.",
+    title: "Apresentação e Segurança",
+    problem: "Cliente pergunta preço, você fala, ela some.",
+    solution: "Gerar valor e segurança antes de falar de preço. O foco é na avaliação.",
+    example: "Aqui na [Clínica] a gente é especializada em [procedimento].\n\nNa sua avaliação, vou analisar seu caso, te mostrar o que é possível fazer e você sai sabendo exatamente o investimento — sem surpresas.\n\nA avaliação é gratuita e sem compromisso. Muita gente vem só pra tirar dúvidas mesmo.",
     implementationTime: "5 minutos",
     implementation: (
       <div className="space-y-4">
         <div>
           <p className="text-gray-600 text-sm mb-2"><strong>Criar Resposta Rápida personalizada:</strong></p>
           <ul className="list-disc list-inside text-gray-600 space-y-1 text-sm">
-            <li>Adapte o script modelo para seu serviço/produto</li>
-            <li>Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/apresenta</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/servico</code></li>
+            <li>Adapte o script com o nome da sua clínica e procedimento principal</li>
+            <li>Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/sobre</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/botox</code></li>
           </ul>
-        </div>
-        
-        <div className="bg-white p-3 rounded border border-gray-200">
-          <p className="text-xs font-bold text-gray-500 uppercase mb-2">Fórmula para adaptar</p>
-          <div className="space-y-2 text-sm text-gray-700 font-mono">
-            <p><span className="text-blue-600">Linha 1:</span> [O que você faz] + [para quem]</p>
-            <p><span className="text-blue-600">Linha 2:</span> Funciona assim: [como funciona em 1 frase]</p>
-            <p><span className="text-blue-600">Linha 3:</span> Resultado: [benefício principal]</p>
-          </div>
         </div>
       </div>
     )
   },
   {
     id: 5,
-    title: "Condução",
-    problem: "Você espera o cliente pedir pra comprar. Ele nunca pede e some.",
-    solution: "Oferecer o próximo passo de forma natural, sem pressionar.",
-    example: "Se fizer sentido pra você, o próximo passo é [agendar/orçar/etc].\nQuer que eu te explique como funciona?",
+    title: "Condução para Avaliação",
+    problem: "Você espera a cliente pedir pra agendar. Ela nunca pede e some.",
+    solution: "Oferecer o agendamento da avaliação como o próximo passo natural.",
+    example: "Se você quiser, o próximo passo é agendar sua avaliação gratuita pra gente conversar pessoalmente.\n\nQuer que eu veja os horários disponíveis essa semana?",
     implementationTime: "3 minutos",
     implementation: (
       <div className="space-y-3">
         <div>
           <p className="text-gray-600 text-sm"><strong>Criar Resposta Rápida de condução:</strong></p>
-          <p className="text-sm text-gray-600 mt-1">Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/proximo</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/avancar</code></p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-green-50 p-2 rounded border border-green-100">
-            <span className="block font-bold text-green-700 mb-1">Quando usar:</span>
-            <ul className="list-disc list-inside text-gray-600 text-xs space-y-1">
-              <li>Depois de explicar serviço</li>
-              <li>Cliente demonstrou interesse</li>
-              <li>Cliente parou de perguntar</li>
-            </ul>
-          </div>
-          <div className="bg-red-50 p-2 rounded border border-red-100">
-            <span className="block font-bold text-red-600 mb-1">Nunca use se:</span>
-            <ul className="list-disc list-inside text-gray-600 text-xs space-y-1">
-              <li>Cliente tem muitas dúvidas</li>
-              <li>Disse "só pesquisando"</li>
-              <li>Conversa acabou de começar</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 rounded border border-gray-200 text-sm">
-          <p className="font-bold text-gray-600 mb-1">Variações úteis:</p>
-          <ul className="space-y-1 text-gray-600">
-            <li><code className="bg-gray-100 px-1 rounded">/proximo</code> → "Se fizer sentido, o próximo passo é..."</li>
-            <li><code className="bg-gray-100 px-1 rounded">/duvida</code> → "O que ainda precisa saber?"</li>
-            <li><code className="bg-gray-100 px-1 rounded">/comparando</code> → "Posso te ajudar a comparar..."</li>
-          </ul>
+          <p className="text-sm text-gray-600 mt-1">Atalho sugerido: <code className="bg-gray-200 px-1 rounded text-darkBlue">/vamos</code> ou <code className="bg-gray-200 px-1 rounded text-darkBlue">/agendar</code></p>
         </div>
       </div>
     )
@@ -183,37 +125,29 @@ const steps = [
   {
     id: 6,
     title: "Encaminhamento Claro",
-    problem: "Conversa de 3 dias que não fecha. Cliente some no meio.",
-    solution: "Sempre ter próximo passo concreto: agendamento, orçamento, pagamento ou transferência.",
-    example: "Perfeito! Tenho esses horários essa semana:\n\nTerça às 14h\nQuarta às 10h\nQuinta às 16h\n\nQual funciona melhor pra você?",
+    problem: "Fica num vai e vem de horários que cansa a cliente.",
+    solution: "Dar opções fechadas de horário para facilitar a decisão.",
+    example: "Ótimo! Essa semana tenho esses horários pra avaliação:\n\n• Terça às 14h\n• Quarta às 10h ou 16h\n• Quinta às 11h\n\nQual fica melhor pra você?",
     implementationTime: "5 minutos",
     implementation: (
       <div className="space-y-4">
-        <p className="text-gray-600 text-sm"><strong>Criar Respostas Rápidas para cada tipo:</strong></p>
+        <p className="text-gray-600 text-sm"><strong>Criar Respostas Rápidas para cada momento:</strong></p>
         
         <div className="space-y-3">
           <div className="bg-white p-3 rounded border border-gray-200">
             <div className="flex justify-between items-center mb-1">
-              <span className="font-bold text-darkBlue text-sm">1. Para Agendamentos</span>
-              <code className="bg-gray-100 px-1 rounded text-xs text-gray-500">/agenda</code>
+              <span className="font-bold text-darkBlue text-sm">1. Para Oferecer Horários</span>
+              <code className="bg-gray-100 px-1 rounded text-xs text-gray-500">/horarios</code>
             </div>
-            <p className="text-gray-600 text-xs italic">"Tenho esses horários essa semana: [lista]..."</p>
+            <p className="text-gray-600 text-xs italic">"Essa semana tenho: [lista]..."</p>
           </div>
 
           <div className="bg-white p-3 rounded border border-gray-200">
             <div className="flex justify-between items-center mb-1">
-              <span className="font-bold text-darkBlue text-sm">2. Para Orçamentos</span>
-              <code className="bg-gray-100 px-1 rounded text-xs text-gray-500">/orcamento</code>
-            </div>
-            <p className="text-gray-600 text-xs italic">"Pra passar o valor, preciso saber: 1... 2..."</p>
-          </div>
-
-          <div className="bg-white p-3 rounded border border-gray-200">
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-bold text-darkBlue text-sm">3. Para Confirmar</span>
+              <span className="font-bold text-darkBlue text-sm">2. Para Confirmar</span>
               <code className="bg-gray-100 px-1 rounded text-xs text-gray-500">/confirma</code>
             </div>
-            <p className="text-gray-600 text-xs italic">"Agendado! Me passa seu nome completo..."</p>
+            <p className="text-gray-600 text-xs italic">"Perfeito! Agendado pra [dia]... Nosso endereço:..."</p>
           </div>
         </div>
       </div>
@@ -222,53 +156,40 @@ const steps = [
   {
     id: 7,
     title: "Registro e Follow-up",
-    problem: "Você esquece de dar follow-up e perde cliente que estava interessado.",
-    solution: "Anotar todo contato com status (quente/morno/frio) e próximo passo.",
-    example: "Oi [Nome]!\nPassando aqui pra saber se ainda faz sentido [o que conversaram].\nQualquer dúvida, estou por aqui 😊",
+    problem: "Você esquece de chamar quem não respondeu e perde a venda.",
+    solution: "Recuperar quem sumiu com mensagens de cuidado, não de cobrança.",
+    example: "Oi [Nome]! Tudo bem?\n\nPassando pra saber se você ainda quer agendar sua avaliação de [procedimento].\n\nEssa semana ainda tenho alguns horários. Me avisa se tiver interesse! 😊",
     implementationTime: "10 minutos",
     implementation: (
       <div className="space-y-4">
         <div>
-          <strong className="block text-darkBlue text-sm mb-1">Opção 1: Etiquetas do WhatsApp Business (Simples)</strong>
-          <ol className="list-decimal list-inside text-gray-600 space-y-1 text-sm">
-            <li>Vá em uma conversa → 3 pontinhos → Etiqueta</li>
-            <li>Crie: 🔥 Quente | 🟡 Morno | 🔵 Frio | ✅ Fechou</li>
-            <li>Marque cada conversa e filtre depois para cobrar</li>
-          </ol>
+          <strong className="block text-darkBlue text-sm mb-1">Opção 1: Etiquetas do WhatsApp</strong>
+          <p className="text-sm text-gray-600 mb-2">Marque as clientes como "Quente", "Morna" ou "Fria".</p>
         </div>
 
         <div>
-          <strong className="block text-darkBlue text-sm mb-1">Opção 2: Respostas Rápidas de Follow-up</strong>
+          <strong className="block text-darkBlue text-sm mb-1">Opção 2: Scripts de Recuperação</strong>
           <div className="grid grid-cols-1 gap-2 mt-1">
             <div className="flex items-center justify-between bg-white p-2 border border-gray-200 rounded text-sm">
               <span className="text-red-500 font-bold">Quente (1-2 dias)</span>
-              <code className="bg-gray-100 px-1 rounded text-xs">/followquente</code>
+              <code className="bg-gray-100 px-1 rounded text-xs">/oi1</code>
             </div>
             <div className="flex items-center justify-between bg-white p-2 border border-gray-200 rounded text-sm">
-              <span className="text-yellow-600 font-bold">Morno (3-5 dias)</span>
-              <code className="bg-gray-100 px-1 rounded text-xs">/followmorno</code>
+              <span className="text-yellow-600 font-bold">Morna (4-5 dias)</span>
+              <code className="bg-gray-100 px-1 rounded text-xs">/oi2</code>
             </div>
             <div className="flex items-center justify-between bg-white p-2 border border-gray-200 rounded text-sm">
-              <span className="text-blue-500 font-bold">Frio (7-15 dias)</span>
-              <code className="bg-gray-100 px-1 rounded text-xs">/followfrio</code>
+              <span className="text-blue-500 font-bold">Fria (10-15 dias)</span>
+              <code className="bg-gray-100 px-1 rounded text-xs">/oi3</code>
             </div>
           </div>
-        </div>
-
-        <div className="bg-blue-50 p-3 rounded border border-blue-100 text-sm">
-          <p className="font-bold text-blue-800 mb-1">Rotina Sugerida:</p>
-          <ul className="list-none space-y-1 text-blue-900/80 text-xs">
-            <li>📅 <strong>Todo dia:</strong> Verificar etiquetas 🔥</li>
-            <li>📅 <strong>Toda quarta:</strong> Verificar etiquetas 🟡</li>
-            <li>📅 <strong>Toda segunda:</strong> Verificar etiquetas 🔵</li>
-          </ul>
         </div>
       </div>
     )
   }
 ];
 
-export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGenerator }) => {
+export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGenerator, onLogout }) => {
   const [expandedStep, setExpandedStep] = useState<number | null>(1);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
@@ -283,37 +204,32 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleUpgradeClick = () => {
+    window.dispatchEvent(new CustomEvent('navigate-to-ai'));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button 
-            onClick={onBack}
-            className="text-gray-500 hover:text-darkBlue hover:bg-gray-100 p-2 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-lg md:text-xl font-bold text-darkBlue flex-1">
-            Os 7 Passos
-          </h1>
-        </div>
-      </header>
+      <AuthenticatedHeader 
+        currentPage="Os 7 Passos"
+        onNavigateToDashboard={onBack}
+        onLogout={onLogout}
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         
         {/* Intro */}
         <div className="mb-8 text-center md:text-left">
           <h2 className="text-2xl md:text-3xl font-bold text-darkBlue mb-3">
-            O Protocolo que Converte
+            O Protocolo que Transforma Mensagens em Agendamentos
           </h2>
           <p className="text-gray-600 leading-relaxed text-lg">
-            Cada passo resolve um problema específico. Todos juntos criam um processo comercial que <span className="font-semibold text-whatsappDark">transforma conversas em vendas</span>.
+            Cada passo resolve um problema específico do atendimento em clínicas de estética. Juntos, criam um processo que funciona — mesmo quando você não está online.
           </p>
         </div>
 
         {/* Steps List */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-12">
           {steps.map((step) => (
             <div 
               key={step.id} 
@@ -417,7 +333,7 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
         </div>
 
         {/* Shortcuts Summary */}
-        <div className="mt-12 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="mb-12 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="bg-darkBlue p-4 flex items-center gap-2 text-white">
             <Smartphone className="w-5 h-5" />
             <h3 className="font-bold">Resumo: Seus Atalhos no WhatsApp</h3>
@@ -434,14 +350,13 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
                 {[
                   { code: "/inicio", desc: "Mensagem de expectativa" },
                   { code: "/qualifica", desc: "Pergunta de qualificação" },
-                  { code: "/apresenta", desc: "Apresentação do serviço" },
-                  { code: "/proximo", desc: "Condução para próximo passo" },
-                  { code: "/agenda", desc: "Oferecer horários" },
-                  { code: "/orcamento", desc: "Pedir dados para orçamento" },
+                  { code: "/sobre", desc: "Apresentação da clínica" },
+                  { code: "/vamos", desc: "Condução para avaliação" },
+                  { code: "/horarios", desc: "Oferecer horários" },
                   { code: "/confirma", desc: "Confirmar agendamento" },
-                  { code: "/followquente", desc: "Follow-up cliente quente" },
-                  { code: "/followmorno", desc: "Follow-up cliente morno" },
-                  { code: "/followfrio", desc: "Follow-up cliente frio" },
+                  { code: "/oi1", desc: "Follow-up cliente quente" },
+                  { code: "/oi2", desc: "Follow-up cliente morna" },
+                  { code: "/oi3", desc: "Follow-up cliente fria" },
                 ].map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-darkBlue font-bold">{row.code}</td>
@@ -458,13 +373,31 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
           </div>
         </div>
 
+        {/* Upgrade Section - AI Secretary */}
+        <div className="mt-12 pt-12 border-t border-gray-200">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-whatsapp rounded-2xl p-8 text-center shadow-sm">
+            <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-3 flex items-center justify-center gap-2">
+              🤖 Quer automatizar tudo isso?
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+              Você aprendeu o protocolo. Agora imagine ele funcionando sozinho, 24 horas por dia, sem você precisar fazer nada.
+            </p>
+            <button 
+              onClick={handleUpgradeClick}
+              className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors inline-flex items-center gap-2"
+            >
+              Conhecer a Secretária de IA <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
         {/* Footer Action */}
         <div className="mt-8 text-center pb-8">
           <button 
             onClick={onNavigateToGenerator}
-            className="w-full md:w-auto bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mx-auto"
+            className="w-full md:w-auto text-gray-500 hover:text-darkBlue font-medium py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
           >
-            Agora crie seus scripts personalizados <ArrowRight className="w-5 h-5" />
+            Ir para o Gerador de Scripts <ArrowRight className="w-5 h-5" />
           </button>
         </div>
 

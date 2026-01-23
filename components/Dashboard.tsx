@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, ClipboardList, Zap, FolderOpen, User } from 'lucide-react';
+import { ClipboardList, Zap, FolderOpen, Bot, ArrowRight } from 'lucide-react';
 import { supabase } from '../supabase';
+import { AuthenticatedHeader } from './AuthenticatedHeader';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -8,105 +9,103 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onLogout, onNavigate }) => {
-  const [userName, setUserName] = useState('Aluno');
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    // Try to get from local storage first
-    const storedEmail = localStorage.getItem('userEmail') || localStorage.getItem('emailCompra');
-    if (storedEmail) {
-      setUserName(storedEmail.split('@')[0]);
-    } else {
-      // Try to get active session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.email) {
-          setUserName(session.user.email.split('@')[0]);
-        }
-      });
-    }
+    // Fetch User Email for Welcome Message
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+        return;
+      }
+      
+      const storedEmail = localStorage.getItem('userEmail') || localStorage.getItem('emailCompra');
+      if (storedEmail) {
+        setUserEmail(storedEmail);
+      }
+    };
+    getUser();
   }, []);
+
+  const userNameDisplay = userEmail ? userEmail.split('@')[0] : 'Doutora';
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-whatsapp w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold">
-              P
-            </div>
-            <span className="font-bold text-darkBlue hidden md:block">Protocolo de Atendimento</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
-              <User className="w-4 h-4" />
-              <span className="max-w-[150px] truncate">Olá, {userName}</span>
-            </div>
-            <button 
-              onClick={onLogout}
-              className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-gray-100"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <AuthenticatedHeader 
+        onNavigateToDashboard={() => {}} // Already on dashboard
+        onLogout={onLogout}
+      />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-darkBlue mb-2">Bem-vindo ao Protocolo!</h1>
-          <p className="text-gray-500 text-lg">Escolha por onde quer começar a transformar seu atendimento:</p>
+          <h1 className="text-3xl font-bold text-darkBlue mb-2">Bem-vindo(a), {userNameDisplay}!</h1>
+          <p className="text-gray-500 text-lg">Escolha por onde começar a transformar o atendimento da sua clínica:</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1 */}
           <button 
             onClick={() => onNavigate('7-passos')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left flex flex-col h-full"
           >
-            <div className="bg-blue-50 w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-8 h-8 text-blue-600" />
+            <div className="bg-blue-50 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <ClipboardList className="w-6 h-6 text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Os 7 Passos</h3>
-            <p className="text-gray-500 leading-relaxed">
-              O método completo passo-a-passo para transformar curiosos em clientes pagantes.
+            <h3 className="text-lg font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Os 7 Passos</h3>
+            <p className="text-gray-500 text-sm leading-relaxed flex-1">
+              O método completo passo-a-passo para transformar curiosos em pacientes agendados.
             </p>
           </button>
 
           {/* Card 2 */}
           <button 
             onClick={() => onNavigate('gerador')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left flex flex-col h-full"
           >
-            <div className="bg-yellow-50 w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <Zap className="w-8 h-8 text-yellow-600" />
+            <div className="bg-yellow-50 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Zap className="w-6 h-6 text-yellow-600" />
             </div>
-            <h3 className="text-xl font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Gerador de Scripts</h3>
-            <p className="text-gray-500 leading-relaxed">
-              Responda algumas perguntas e crie scripts de venda personalizados para seu negócio.
+            <h3 className="text-lg font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Gerador de Scripts</h3>
+            <p className="text-gray-500 text-sm leading-relaxed flex-1">
+              Crie scripts de venda personalizados para seus procedimentos estéticos.
             </p>
           </button>
 
           {/* Card 3 */}
           <button 
             onClick={() => onNavigate('exemplos')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:border-whatsapp hover:shadow-md transition-all group text-left flex flex-col h-full"
           >
-            <div className="bg-purple-50 w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <FolderOpen className="w-8 h-8 text-purple-600" />
+            <div className="bg-purple-50 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <FolderOpen className="w-6 h-6 text-purple-600" />
             </div>
-            <h3 className="text-xl font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Exemplos por Nicho</h3>
-            <p className="text-gray-500 leading-relaxed">
-              Biblioteca de conversas reais e scripts validados para diferentes áreas de atuação.
+            <h3 className="text-lg font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Exemplos por Nicho</h3>
+            <p className="text-gray-500 text-sm leading-relaxed flex-1">
+              Biblioteca de conversas reais e scripts validados para clínicas.
             </p>
           </button>
-        </div>
 
-        {/* Coming Soon / Footer area */}
-        <div className="mt-12 p-6 bg-gray-100 rounded-xl border border-dashed border-gray-300 text-center text-gray-400 text-sm">
-          Novos módulos serão adicionados em breve.
+          {/* Card 4 - Highlighted AI Offer */}
+          <button 
+            onClick={() => onNavigate('ai-secretary')}
+            className="bg-gradient-to-br from-green-50 to-white p-6 rounded-2xl shadow-sm border-2 border-whatsapp/50 hover:border-whatsapp hover:shadow-md transition-all group text-left relative flex flex-col h-full overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 bg-whatsapp text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+              NOVIDADE
+            </div>
+            <div className="bg-green-100 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Bot className="w-6 h-6 text-whatsapp" />
+            </div>
+            <h3 className="text-lg font-bold text-darkBlue mb-2 group-hover:text-whatsapp transition-colors">Secretária de IA</h3>
+            <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-3">
+              Automatize todo esse processo e nunca mais perca paciente por demora.
+            </p>
+            <span className="text-whatsapp font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              Conhecer <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
         </div>
       </main>
     </div>

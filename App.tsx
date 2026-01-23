@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { Quiz } from './components/Quiz';
 import { EmailCapture } from './components/EmailCapture';
 import { ResultPage } from './components/ResultPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { PixPaymentPage } from './components/PixPaymentPage';
-import { CreateAccountPage } from './components/CreateAccountPage'; // New
-import { ResetPasswordPage } from './components/ResetPasswordPage'; // New
-import { SuccessPage } from './components/SuccessPage'; // Kept as fallback
+import { CreateAccountPage } from './components/CreateAccountPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
+import { SuccessPage } from './components/SuccessPage';
 import { Dashboard } from './components/Dashboard';
 import { SevenSteps } from './components/SevenSteps';
 import { ScriptGenerator } from './components/ScriptGenerator';
 import { NicheExamples } from './components/NicheExamples';
+import { AISecretaryPage } from './components/AISecretaryPage';
 import { LoginModal } from './components/LoginModal'; 
 import { ScreenState, QuizAnswers, CalculationResult, CONTACT_RANGES, TICKET_RANGES, PixPaymentData } from './types';
 import { supabase } from './supabase';
@@ -21,19 +23,87 @@ const App: React.FC = () => {
   const [answers, setAnswers] = useState<QuizAnswers | null>(null);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [userEmail, setUserEmail] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // Check for access on mount and listen for Auth Changes
+  // Listen for custom navigation events dispatched from deep child components
   useEffect(() => {
-    // 1. Listen for Supabase Auth state changes
+    const handleNavigationEvent = () => {
+      setScreen('ai-secretary');
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('navigate-to-ai', handleNavigationEvent);
+
+    return () => {
+      window.removeEventListener('navigate-to-ai', handleNavigationEvent);
+    };
+  }, []);
+
+  // Initial Session Check & Auth Listener
+  useEffect(() => {
+    let mounted = true;
+
+    const checkInitialSession = async () => {
+      try {
+        // 1. Check for Recovery Hash (Priority)
+        const hash = window.location.hash;
+        if (hash && hash.includes('type=recovery')) {
+          if (mounted) {
+            setScreen('reset-password');
+            setIsCheckingSession(false);
+          }
+          return;
+        }
+
+        // 2. Check Existing Session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // Verify Payment
+          const { data: lead } = await supabase
+            .from('leads')
+            .select('pagou')
+            .eq('email', session.user.email)
+            .maybeSingle();
+
+          if (lead && lead.pagou) {
+            if (mounted) {
+              localStorage.setItem('acessoLiberado', 'true');
+              localStorage.setItem('userEmail', session.user.email || '');
+              setScreen('dashboard');
+            }
+          } else {
+            // Logged in but not paid? Sign out to be safe/clean
+            await supabase.auth.signOut();
+            if (mounted) setScreen('landing');
+          }
+        } else {
+          // No session
+          if (mounted) setScreen('landing');
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        if (mounted) setScreen('landing');
+      } finally {
+        if (mounted) setIsCheckingSession(false);
+      }
+    };
+
+    checkInitialSession();
+
+    // 3. Listen for Auth Changes (Login/Logout during usage)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
       console.log('Auth Event:', event);
 
-      if (event === 'SIGNED_IN' && session) {
-        // User just logged in
-        // Check if they have paid
+      if (event === 'PASSWORD_RECOVERY') {
+        setScreen('reset-password');
+      } else if (event === 'SIGNED_IN' && session) {
+        // Check payment on login event
         const { data: lead } = await supabase
           .from('leads')
           .select('pagou')
@@ -43,47 +113,21 @@ const App: React.FC = () => {
         if (lead && lead.pagou) {
           localStorage.setItem('acessoLiberado', 'true');
           localStorage.setItem('userEmail', session.user.email || '');
-          setScreen('dashboard');
-          setIsLoginModalOpen(false);
-        } else {
-          // If logged in but not paid (unlikely via UI, but possible via API)
-          // We could force logout or show error.
-          // For now, staying on current screen or landing.
+          
+          if (screen !== 'reset-password') {
+            setScreen('dashboard');
+            setIsLoginModalOpen(false);
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         localStorage.removeItem('acessoLiberado');
         localStorage.removeItem('userEmail');
         setScreen('landing');
-      } else if (event === 'PASSWORD_RECOVERY') {
-        // User clicked the reset link in email
-        setScreen('reset-password');
       }
     });
 
-    // 2. Initial Session Check (Persistent Login)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-         const { data: lead } = await supabase
-          .from('leads')
-          .select('pagou')
-          .eq('email', session.user.email)
-          .maybeSingle();
-        
-        if (lead && lead.pagou) {
-          localStorage.setItem('acessoLiberado', 'true');
-          localStorage.setItem('userEmail', session.user.email || '');
-          // Only redirect to dashboard if we are on landing or login flow
-          if (screen === 'landing') {
-             setScreen('dashboard');
-          }
-        }
-      }
-    };
-    
-    checkSession();
-
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []); // Run once on mount
@@ -170,9 +214,10 @@ const App: React.FC = () => {
     setScreen('email');
   };
 
-  const handleEmailSubmit = async (email: string) => {
+  const handleEmailSubmit = async (email: string, phone: string) => {
     if (!answers) return;
     setUserEmail(email);
+    setUserPhone(phone);
     setIsLoading(true);
     
     // 1. Calculate
@@ -194,6 +239,7 @@ const App: React.FC = () => {
     
     const leadData = {
       email,
+      whatsapp: phone.replace(/\D/g, ''), // Store clean number
       contatos_mes: contactsVal,
       contatos_mes_manual: contactsManual,
       ticket_medio: ticketVal,
@@ -265,6 +311,7 @@ const App: React.FC = () => {
   };
 
   const handlePasswordResetSuccess = () => {
+    // User is logged in and password is new
     setScreen('dashboard');
     window.scrollTo(0,0);
   };
@@ -289,8 +336,28 @@ const App: React.FC = () => {
     } else if (module === 'exemplos') {
       setScreen('examples');
       window.scrollTo(0,0);
+    } else if (module === 'ai-secretary') {
+      setScreen('ai-secretary');
+      window.scrollTo(0,0);
     }
   };
+
+  // Splash Screen while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-gray-100 border-t-whatsapp rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+               <div className="w-2 h-2 bg-whatsapp rounded-full"></div>
+            </div>
+          </div>
+          <p className="text-gray-400 text-sm font-medium animate-pulse">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="font-sans antialiased text-gray-900">
@@ -334,6 +401,7 @@ const App: React.FC = () => {
       {screen === 'checkout' && (
         <CheckoutPage 
           initialEmail={userEmail}
+          initialPhone={userPhone}
           onPixCreated={handlePixCreated}
           onBack={() => setScreen('result')}
         />
@@ -377,17 +445,29 @@ const App: React.FC = () => {
         <SevenSteps
           onBack={() => setScreen('dashboard')}
           onNavigateToGenerator={() => handleDashboardNavigate('gerador')}
+          onLogout={handleLogout}
         />
       )}
       
       {screen === 'generator' && (
-        <ScriptGenerator onBack={() => setScreen('dashboard')} />
+        <ScriptGenerator 
+          onBack={() => setScreen('dashboard')} 
+          onLogout={handleLogout}
+        />
       )}
 
       {screen === 'examples' && (
         <NicheExamples 
           onBack={() => setScreen('dashboard')} 
           onGoToGenerator={() => handleDashboardNavigate('gerador')}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {screen === 'ai-secretary' && (
+        <AISecretaryPage 
+          onBack={() => setScreen('dashboard')}
+          onLogout={handleLogout}
         />
       )}
     </div>

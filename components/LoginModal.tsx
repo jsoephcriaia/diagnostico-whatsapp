@@ -25,6 +25,29 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setError('');
 
     try {
+      // 0. Pre-check: Verify if already logged in to prevent loops
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      
+      if (existingSession) {
+        // If logged in, assume user wants to access paid area with current account
+        // Check payment immediately
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('pagou')
+          .eq('email', existingSession.user.email)
+          .maybeSingle();
+
+        if (lead && lead.pagou) {
+          // Already paid and logged in
+          onClose(); // App.tsx will handle redirect via listener
+          setIsLoading(false);
+          return;
+        } else {
+          // Logged in but not paid - Sign out to allow fresh login/attempt
+          await supabase.auth.signOut();
+        }
+      }
+
       // 1. Authenticate with Supabase
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,

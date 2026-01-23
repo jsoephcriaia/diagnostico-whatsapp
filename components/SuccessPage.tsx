@@ -40,7 +40,7 @@ export const SuccessPage: React.FC<SuccessPageProps> = ({ onGoToDashboard }) => 
           onClick={onGoToDashboard}
           className="w-full bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-lg shadow-md transition flex items-center justify-center gap-2"
         >
-          Acessar Área do Aluno <ArrowRight className="w-5 h-5" />
+          Acessar Meu Protocolo <ArrowRight className="w-5 h-5" />
         </button>
       </div>
     </div>

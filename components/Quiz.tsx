@@ -87,7 +87,7 @@ export const Quiz: React.FC<QuizProps> = ({ onComplete, onBack }) => {
           className={`w-full p-4 rounded-xl border-2 text-left transition-all flex justify-between items-center ${
             answers[answerKey] === option.value 
               ? 'border-whatsapp bg-green-50 text-darkBlue font-medium shadow-sm' 
-              : 'border-gray-100 bg-white text-slateText hover:border-gray-300'
+              : 'border-gray-100 bg-white text-slateText hover:border-gray-300 hover:border-aesthetic-gold/50'
           }`}
         >
           <span className="text-base md:text-lg">{option.label}</span>
@@ -161,7 +161,7 @@ export const Quiz: React.FC<QuizProps> = ({ onComplete, onBack }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start pt-10 px-4">
+    <div className="min-h-screen bg-aesthetic-bg flex flex-col items-center justify-start pt-10 px-4">
       {/* Progress Bar */}
       <div className="w-full max-w-md mb-8">
         <div className="flex justify-between text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
@@ -182,7 +182,7 @@ export const Quiz: React.FC<QuizProps> = ({ onComplete, onBack }) => {
         {step === 0 && (
           <div className="animate-fade-in">
             <h2 className="text-xl md:text-2xl font-bold text-darkBlue mb-6 leading-snug">
-              Quantos contatos novos você recebe por mês no WhatsApp?
+              Quantas mensagens sua clínica recebe por mês no WhatsApp?
             </h2>
             {isManualInput 
               ? renderManualInput(
@@ -199,11 +199,11 @@ export const Quiz: React.FC<QuizProps> = ({ onComplete, onBack }) => {
         {step === 1 && (
           <div className="animate-fade-in">
             <h2 className="text-xl md:text-2xl font-bold text-darkBlue mb-6 leading-snug">
-              Qual o valor médio de uma venda no seu negócio?
+              Quanto um cliente gasta em média por visita na sua clínica?
             </h2>
             {isManualInput
               ? renderManualInput(
-                  "Qual o valor médio de uma venda?", 
+                  "Gasto médio por visita?", 
                   "Ex: 450", 
                   "ticketRange", 
                   undefined, 
@@ -218,25 +218,25 @@ export const Quiz: React.FC<QuizProps> = ({ onComplete, onBack }) => {
         {step === 2 && (
           <div className="animate-fade-in">
             <h2 className="text-xl md:text-2xl font-bold text-darkBlue mb-6 leading-snug">
-              A cada quantos contatos você fecha 1 venda?
+              De cada 10 pessoas que mandam mensagem, quantas agendam?
             </h2>
             {isManualInput
               ? renderManualInput(
-                  "A cada quantos contatos você vende?",
-                  "Ex: 12",
+                  "De cada 10, quantas agendam?",
+                  "Ex: 2",
                   "conversionRate",
-                  "Se você fecha 1 venda a cada 12 contatos, digite 12."
+                  "Se você fecha 2 vendas a cada 10 contatos, digite 2."
                 )
-              : renderOptionsList(CONVERSION_RANGES, "conversionRate", true)
+              : renderOptionsList(CONVERSION_RANGES, "conversionRate", false)
             }
           </div>
         )}
 
-        {/* Step 3: Response Time (No manual input needed) */}
+        {/* Step 3: Response Time */}
         {step === 3 && (
           <div className="animate-fade-in">
             <h2 className="text-xl md:text-2xl font-bold text-darkBlue mb-6 leading-snug">
-              Quanto tempo você costuma levar para responder a primeira mensagem?
+              Quanto tempo sua clínica demora para responder uma mensagem nova?
             </h2>
             {renderOptionsList(RESPONSE_TIMES, "responseTime", false)}
           </div>
