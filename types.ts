@@ -21,6 +21,8 @@ export interface PixPaymentData {
   copiaECola: string;
   cobrancaId: string;
   valor: number;
+  paymentMethod?: 'pix' | 'cartao';
+  paymentLink?: string;
 }
 
 export interface BusinessInfo {

@@ -53,10 +53,11 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
         },
         body: JSON.stringify({
           nome: formData.name,
-          cpf: formData.cpf.replace(/\D/g, ''), // Remove mask (dots and dash)
           email: formData.email,
-          whatsapp: rawPhone,
-          formaPagamento: formData.paymentMethod
+          cpfCnpj: formData.cpf.replace(/\D/g, ''),
+          telefone: rawPhone,
+          formaPagamento: formData.paymentMethod,
+          billingType: formData.paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD'
         })
       });
 
@@ -69,17 +70,30 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
       // Save IDs for later check
       localStorage.setItem('cobrancaId', result.cobrancaId);
       localStorage.setItem('emailCompra', formData.email);
+      localStorage.setItem('nomeCliente', formData.name);
 
       if (formData.paymentMethod === 'pix') {
         onPixCreated({
           qrCode: result.pix.qrCode,
           copiaECola: result.pix.copiaECola,
           cobrancaId: result.cobrancaId,
-          valor: 49.00
+          valor: 49.00,
+          paymentMethod: 'pix'
         });
       } else {
-        // Credit Card -> Redirect
-        window.location.href = result.linkPagamento;
+        // Fluxo Cartão: Abre em nova aba e mantem o app rodando para verificar
+        if (result.linkPagamento) {
+          window.open(result.linkPagamento, '_blank');
+        }
+        
+        onPixCreated({
+          qrCode: '',
+          copiaECola: '',
+          cobrancaId: result.cobrancaId,
+          valor: 49.00,
+          paymentMethod: 'cartao',
+          paymentLink: result.linkPagamento
+        });
       }
 
     } catch (err: any) {
@@ -243,7 +257,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ initialEmail, initia
                    <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
                    <div>
                      <p className="font-bold mb-1">Ambiente Seguro</p>
-                     <p>Para sua segurança, você será redirecionado para a página de pagamento criptografada do Asaas para inserir os dados do seu cartão.</p>
+                     <p>Para sua segurança, uma nova aba será aberta para você digitar os dados do cartão com criptografia bancária.</p>
                    </div>
                  </div>
               )}

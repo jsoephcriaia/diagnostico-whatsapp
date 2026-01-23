@@ -281,6 +281,28 @@ const App: React.FC = () => {
         })
         .eq('email', userEmail);
     }
+
+    // Enviar email de confirmação de compra
+    try {
+      const emailFinal = userEmail || localStorage.getItem('emailCompra') || '';
+      const nomeCliente = localStorage.getItem('nomeCliente') || '';
+      
+      if (emailFinal) {
+        await fetch('https://wlpqifxosgeoiofmjbsa.supabase.co/functions/v1/enviar-email-compra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: emailFinal,
+            nome: nomeCliente
+          })
+        });
+        console.log('Email de confirmação de compra enviado');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar email de confirmação:', error);
+      // Não bloquear o fluxo se der erro no email
+    }
+
     setScreen('create-account');
     window.scrollTo(0,0);
   };
