@@ -260,6 +260,13 @@ export const NicheExamples: React.FC<NicheExamplesProps> = ({ onBack, onGoToGene
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         
+        <button 
+          onClick={onBack} 
+          className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+        >
+          ← Voltar
+        </button>
+
         {/* Niche Selector */}
         <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
           {NICHES.map((niche) => {

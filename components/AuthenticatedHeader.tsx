@@ -104,67 +104,69 @@ export const AuthenticatedHeader: React.FC<AuthenticatedHeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 px-4 h-16 z-50 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
-          <button
-            onClick={onNavigateToDashboard}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
-          >
-            <div className="bg-whatsapp w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              P
-            </div>
-            <span className={`font-bold text-darkBlue ${currentPage ? 'hidden md:block' : 'block'}`}>
-              Protocolo de Atendimento
-            </span>
-          </button>
-
-          {currentPage && (
-            <>
-              <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="font-semibold text-whatsapp truncate">
-                {currentPage}
+      <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 h-16 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+            <button
+              onClick={onNavigateToDashboard}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
+            >
+              <div className="bg-whatsapp w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                P
+              </div>
+              <span className={`font-bold text-darkBlue ${currentPage ? 'hidden md:block' : 'block'}`}>
+                Protocolo de Atendimento
               </span>
-            </>
-          )}
-        </div>
+            </button>
 
-        <div className="relative" ref={menuRef}>
-          <button 
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className={`flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1 pr-3 py-1 transition-all hover:bg-gray-50 hover:border-gray-300 ${isUserMenuOpen ? 'ring-2 ring-gray-100' : ''}`}
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-[#c9a87c] to-[#d4a59a] rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              {userInitial}
-            </div>
-            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
+            {currentPage && (
+              <>
+                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="font-semibold text-whatsapp truncate">
+                  {currentPage}
+                </span>
+              </>
+            )}
+          </div>
 
-          {isUserMenuOpen && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
-              <div className="px-4 py-3 text-sm text-gray-500 border-b border-gray-100 break-all bg-gray-50/50">
-                <span className="block text-xs text-gray-400 mb-0.5">Logado como:</span>
-                {userEmail}
+          <div className="relative" ref={menuRef}>
+            <button 
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className={`flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1 pr-3 py-1 transition-all hover:bg-gray-50 hover:border-gray-300 ${isUserMenuOpen ? 'ring-2 ring-gray-100' : ''}`}
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-[#c9a87c] to-[#d4a59a] rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                {userInitial}
               </div>
-              
-              <div className="py-1">
-                <button 
-                  onClick={openPasswordModal}
-                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                >
-                  <Lock className="w-4 h-4 text-gray-400" /> 
-                  Alterar senha
-                </button>
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isUserMenuOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
+                <div className="px-4 py-3 text-sm text-gray-500 border-b border-gray-100 break-all bg-gray-50/50">
+                  <span className="block text-xs text-gray-400 mb-0.5">Logado como:</span>
+                  {userEmail}
+                </div>
                 
-                <button 
-                  onClick={onLogout}
-                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" /> 
-                  Sair
-                </button>
+                <div className="py-1">
+                  <button 
+                    onClick={openPasswordModal}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                  >
+                    <Lock className="w-4 h-4 text-gray-400" /> 
+                    Alterar senha
+                  </button>
+                  
+                  <button 
+                    onClick={onLogout}
+                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" /> 
+                    Sair
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
       

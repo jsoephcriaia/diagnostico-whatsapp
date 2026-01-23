@@ -218,6 +218,13 @@ export const SevenSteps: React.FC<SevenStepsProps> = ({ onBack, onNavigateToGene
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         
+        <button 
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+        >
+          ← Voltar
+        </button>
+
         {/* Intro */}
         <div className="mb-8 text-center md:text-left">
           <h2 className="text-2xl md:text-3xl font-bold text-darkBlue mb-3">

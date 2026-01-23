@@ -364,42 +364,57 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
       />
       
       {step === 'intro' && (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 pt-10">
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-6">
-            <Wand2 className="w-10 h-10 text-yellow-600" />
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-darkBlue mb-4">Gerador de Scripts com IA</h2>
-          <p className="text-gray-600 max-w-md mb-8">
-            Responda algumas perguntas rápidas e nossa Inteligência Artificial vai criar os 7 scripts perfeitos para sua clínica.
-          </p>
-          
-          <div className="flex flex-col w-full max-w-xs gap-3">
-            <button 
-              onClick={() => setStep('form')}
-              className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2"
-            >
-              Começar Agora <ArrowRight className="w-5 h-5" />
-            </button>
+        <div className="max-w-4xl mx-auto px-4 pt-8">
+           <button 
+             onClick={onBack} 
+             className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+           >
+             ← Voltar
+           </button>
+           <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+            <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-6">
+              <Wand2 className="w-10 h-10 text-yellow-600" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-darkBlue mb-4">Gerador de Scripts com IA</h2>
+            <p className="text-gray-600 max-w-md mb-8">
+              Responda algumas perguntas rápidas e nossa Inteligência Artificial vai criar os 7 scripts perfeitos para sua clínica.
+            </p>
             
-            {localStorage.getItem('scriptsGerados') && (
+            <div className="flex flex-col w-full max-w-xs gap-3">
               <button 
-                onClick={loadSavedScripts}
-                className="text-gray-500 hover:text-darkBlue font-medium py-2 transition text-sm"
+                onClick={() => setStep('form')}
+                className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2"
               >
-                Ver scripts gerados anteriormente
+                Começar Agora <ArrowRight className="w-5 h-5" />
               </button>
-            )}
-          </div>
-          
-          <div className="mt-6 flex items-center gap-2 text-gray-400 text-xs">
-            <Clock className="w-3 h-3" />
-            <span>Tempo estimado: 2 minutos</span>
-          </div>
+              
+              {localStorage.getItem('scriptsGerados') && (
+                <button 
+                  onClick={loadSavedScripts}
+                  className="text-gray-500 hover:text-darkBlue font-medium py-2 transition text-sm"
+                >
+                  Ver scripts gerados anteriormente
+                </button>
+              )}
+            </div>
+            
+            <div className="mt-6 flex items-center gap-2 text-gray-400 text-xs">
+              <Clock className="w-3 h-3" />
+              <span>Tempo estimado: 2 minutos</span>
+            </div>
+           </div>
         </div>
       )}
 
       {step === 'form' && (
         <div className="max-w-xl mx-auto pt-8 px-4">
+          <button 
+            onClick={onBack} 
+            className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+          >
+             ← Voltar
+          </button>
+          
           {/* Saved Data Notice */}
           {showSavedDataNotice && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6 flex justify-between items-center text-sm animate-fade-in-up">
@@ -458,6 +473,13 @@ export const ScriptGenerator: React.FC<ScriptGeneratorProps> = ({ onBack, onLogo
 
       {step === 'results' && (
         <div className="max-w-2xl mx-auto space-y-6 pt-8 px-4">
+          <button 
+            onClick={onBack} 
+            className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+          >
+             ← Voltar
+          </button>
+          
           <div className="bg-green-50 border border-green-200 p-4 rounded-xl flex items-start gap-3 mb-6">
             <Check className="w-5 h-5 text-green-600 mt-1 shrink-0" />
             <div>

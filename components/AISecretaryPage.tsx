@@ -18,6 +18,13 @@ export const AISecretaryPage: React.FC<AISecretaryPageProps> = ({ onBack, onLogo
 
       <main className="max-w-4xl mx-auto px-4 py-12">
         
+        <button 
+          onClick={onBack} 
+          className="inline-flex items-center gap-1.5 text-slate-500 text-sm hover:text-slate-800 transition-colors py-2 mb-4"
+        >
+          ← Voltar
+        </button>
+
         {/* Hero / Hook */}
         <div className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-extrabold text-darkBlue mb-4 leading-tight">

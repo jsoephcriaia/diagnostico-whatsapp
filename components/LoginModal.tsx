@@ -21,50 +21,91 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
+    // Validar campos
+    if (!email || !password) {
+      setError('Preencha todos os campos.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Timeout de segurança (10 segundos)
+    let timeoutId: any;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Tempo esgotado. Tente novamente.'));
+      }, 10000);
+    });
+
     try {
-      // CORREÇÃO CRÍTICA: Forçar logout antes de tentar logar
-      // Isso limpa sessões fantasmas/expiradas que causam loop infinito
-      await supabase.auth.signOut();
-
-      // 1. Autenticar no Supabase
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          throw new Error('Email ou senha incorretos.');
+      // Lógica de Login
+      const loginLogic = async () => {
+        // 1. Limpar sessão anterior (ignorar erros)
+        try {
+          await supabase.auth.signOut();
+        } catch (err) {
+          console.log('SignOut pré-login ignorado:', err);
         }
-        throw authError;
-      }
 
-      if (data.session) {
-        // 2. Verificar se o usuário pagou (tabela leads)
+        // 2. Fazer login
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password
+        });
+
+        if (authError) throw authError;
+        if (!data.session) throw new Error('Sessão não estabelecida.');
+
+        // 3. Login OK - verificar se pagou na tabela leads
         const { data: lead, error: leadError } = await supabase
           .from('leads')
           .select('pagou')
-          .eq('email', email)
+          .eq('email', email.trim())
           .maybeSingle();
 
-        if (!lead || !lead.pagou) {
-          // Se não pagou, desloga imediatamente e mostra erro
-          await supabase.auth.signOut();
+        // Se houver erro de banco ou não pagou
+        if (leadError || !lead || !lead.pagou) {
+          await supabase.auth.signOut(); // Deslogar imediatamente
           throw new Error('Acesso não liberado. Complete a compra primeiro.');
         }
 
-        // Sucesso: O listener onAuthStateChange no App.tsx cuidará do redirecionamento
-        onClose();
-      }
+        return true; // Sucesso total
+      };
+
+      // Executa login com timeout
+      await Promise.race([loginLogic(), timeoutPromise]);
+      
+      clearTimeout(timeoutId!);
+      
+      // Se chegou aqui, sucesso. O App.tsx detectará a sessão, mas garantimos o fechar do modal.
+      onClose();
 
     } catch (err: any) {
-      console.error(err);
-      // Garantir logout em caso de erro para não deixar estado sujo
-      await supabase.auth.signOut();
-      setError(err.message || 'Ocorreu um erro ao entrar.');
+      clearTimeout(timeoutId!);
+      console.error('Erro no fluxo de login:', err);
+
+      let msg = 'Erro ao fazer login. Tente novamente.';
+      
+      if (err.message?.includes('Tempo esgotado')) {
+        msg = err.message;
+      } else if (err.message?.includes('Invalid login credentials')) {
+        msg = 'Email ou senha incorretos.';
+      } else if (err.message?.includes('Email not confirmed')) {
+        msg = 'Email não confirmado. Verifique sua caixa de entrada.';
+      } else if (err.message?.includes('Acesso não liberado')) {
+        msg = err.message;
+      } else if (err.message?.includes('Network request failed')) {
+        msg = 'Erro de conexão. Verifique sua internet.';
+      }
+
+      setError(msg);
+
+      // Em caso de erro (exceto timeout), garantir que limpamos o estado local
+      if (!err.message?.includes('Tempo esgotado')) {
+        await supabase.auth.signOut().catch(() => {});
+      }
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +124,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}`, // Redirects to root, App.tsx handles PASSWORD_RECOVERY event
+        redirectTo: `${window.location.origin}`, // Redirects to root
       });
 
       if (error) throw error;
@@ -100,14 +141,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const resetState = () => {
-    setView('login');
-    setEmail('');
-    setPassword('');
-    setError('');
-    setSuccessMessage('');
   };
 
   return (
@@ -157,8 +190,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               {error && (
-                <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg animate-fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   {error}
                 </div>
               )}
@@ -223,14 +256,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               {error && (
-                <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg">
+                <div className="text-red-500 text-sm flex items-center gap-2 bg-red-50 p-3 rounded-lg animate-fade-in">
                   <AlertCircle className="w-4 h-4" />
                   {error}
                 </div>
               )}
 
               {successMessage && (
-                <div className="text-green-600 text-sm flex items-center gap-2 bg-green-50 p-3 rounded-lg">
+                <div className="text-green-600 text-sm flex items-center gap-2 bg-green-50 p-3 rounded-lg animate-fade-in">
                   <AlertCircle className="w-4 h-4" />
                   {successMessage}
                 </div>

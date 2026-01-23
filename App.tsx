@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, WifiOff, LogOut, ArrowRight } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { Quiz } from './components/Quiz';
 import { EmailCapture } from './components/EmailCapture';
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   // Estados de Loading e Sessão
   const [isLoading, setIsLoading] = useState(false); // Para ações internas (botões)
   const [isCheckingSession, setIsCheckingSession] = useState(true); // Para splash screen inicial
-  const [showLoadingFallback, setShowLoadingFallback] = useState(false); // Botão de emergência
+  const [sessionError, setSessionError] = useState(false); // Novo estado para erro de conexão
 
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -43,102 +43,88 @@ const App: React.FC = () => {
     return () => window.removeEventListener('navigate-to-ai', handleNavigationEvent);
   }, []);
 
-  // --- VERIFICAÇÃO DE SESSÃO ROBUSTA ---
-  useEffect(() => {
-    let isMounted = true;
+  // --- FUNÇÃO DE VERIFICAÇÃO DE SESSÃO ---
+  const checkSession = async () => {
+    setIsCheckingSession(true);
+    setSessionError(false);
     
-    // Timer para mostrar botão de fallback se travar
-    const fallbackTimer = setTimeout(() => {
-      if (isMounted) setShowLoadingFallback(true);
-    }, 5000);
+    try {
+      // 1. Timeout de 8 segundos (conforme solicitado)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 8000)
+      );
 
-    const initSession = async () => {
-      try {
-        // Promessa de timeout de 3 segundos
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout na verificação')), 3000)
-        );
-
-        // Lógica de verificação
-        const checkLogic = async () => {
-          // 1. Prioridade: Recuperação de Senha via URL
-          if (window.location.hash && window.location.hash.includes('type=recovery')) {
-            return 'reset-password';
-          }
-
-          // 2. Verificar Sessão no Supabase
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error || !session) {
-            return 'landing';
-          }
-
-          // 3. Verificar Pagamento (Leads)
-          const { data: lead } = await supabase
-            .from('leads')
-            .select('pagou')
-            .eq('email', session.user.email)
-            .maybeSingle();
-
-          if (lead && lead.pagou) {
-            // Sucesso: Usuário logado e pagante
-            localStorage.setItem('acessoLiberado', 'true');
-            localStorage.setItem('userEmail', session.user.email || '');
-            return 'dashboard';
-          } else {
-            // Logado mas não pagou (ou erro na busca): Deslogar por segurança
-            await supabase.auth.signOut();
-            return 'landing';
-          }
-        };
-
-        // Corrida entre a lógica e o timeout
-        const nextScreen = await Promise.race([checkLogic(), timeoutPromise]) as ScreenState;
-
-        if (isMounted) {
-          setScreen(nextScreen);
+      // 2. Lógica de Verificação
+      const checkLogic = async () => {
+        // Prioridade: Recuperação de Senha via URL
+        if (window.location.hash && window.location.hash.includes('type=recovery')) {
+          return 'reset-password';
         }
 
-      } catch (error) {
-        console.warn("Sessão: Falha ou Timeout.", error);
-        // Em caso de erro/timeout, assume landing page para não travar o usuário
-        if (isMounted) setScreen('landing');
-      } finally {
-        if (isMounted) {
-          setIsCheckingSession(false);
-          clearTimeout(fallbackTimer);
+        // Verificar Sessão no Supabase
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Se não tiver sessão ou der erro de auth, vai pra landing
+        if (error || !session) {
+          return 'landing';
         }
-      }
-    };
 
-    initSession();
+        // Verificar Pagamento (Leads)
+        // Usamos maybeSingle para não estourar erro se não achar (embora deva achar)
+        const { data: lead, error: leadError } = await supabase
+          .from('leads')
+          .select('pagou')
+          .eq('email', session.user.email)
+          .maybeSingle();
 
-    // Listener de Auth simplificado apenas para logout/login subsequente
+        if (leadError) {
+          throw leadError; // Lança erro para cair no catch e permitir retry se for rede
+        }
+
+        if (lead && lead.pagou) {
+          // Sucesso: Usuário logado e pagante
+          localStorage.setItem('acessoLiberado', 'true');
+          localStorage.setItem('userEmail', session.user.email || '');
+          return 'dashboard';
+        } else {
+          // Logado mas não pagou: Deslogar e mandar pra landing
+          await supabase.auth.signOut();
+          return 'landing';
+        }
+      };
+
+      // Corrida: Lógica vs Timeout
+      const nextScreen = await Promise.race([checkLogic(), timeoutPromise]) as ScreenState;
+      setScreen(nextScreen);
+
+    } catch (error: any) {
+      console.warn("Erro na verificação de sessão:", error);
+      
+      // Se for Timeout ou erro de rede, mostramos a tela de erro manual
+      // NÃO deslogamos automaticamente para não perder a sessão se for apenas lentidão
+      setSessionError(true);
+    } finally {
+      setIsCheckingSession(false);
+    }
+  };
+
+  // Inicialização
+  useEffect(() => {
+    checkSession();
+
+    // Listener de Auth apenas para mudanças DEPOIS do load inicial
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('acessoLiberado');
         localStorage.removeItem('userEmail');
+        // Só redireciona se não estivermos verificando sessão (evita race condition)
         setScreen('landing');
-      } else if (event === 'SIGNED_IN' && session) {
-        // Só redireciona se estiver na landing ou login, para não atrapalhar fluxos ativos
-        if (screen === 'landing') {
-           const { data: lead } = await supabase
-            .from('leads')
-            .select('pagou')
-            .eq('email', session.user.email)
-            .maybeSingle();
-            
-           if (lead?.pagou) {
-             setScreen('dashboard');
-             setIsLoginModalOpen(false);
-           }
-        }
-      }
+      } 
+      // Não tratamos SIGNED_IN aqui para evitar conflito com checkSession,
+      // o LoginModal já fecha e a verificação inicial cuida do resto.
     });
 
     return () => {
-      isMounted = false;
-      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []); 
@@ -244,6 +230,8 @@ const App: React.FC = () => {
     const leadData = {
       email,
       whatsapp: phone.replace(/\D/g, ''),
+      etapa: 'diagnostico_gratis',
+      data_diagnostico: new Date().toISOString(),
       contatos_mes: contactsVal,
       contatos_mes_manual: contactsManual,
       ticket_medio: ticketVal,
@@ -309,7 +297,6 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // A limpeza e redirecionamento são tratados pelo listener onAuthStateChange
   };
 
   const handleDashboardNavigate = (module: string) => {
@@ -325,13 +312,15 @@ const App: React.FC = () => {
     }
   };
 
-  const handleForceReset = async () => {
+  // Botão de Sair na tela de erro
+  const handleForceLogout = async () => {
     localStorage.clear();
     await supabase.auth.signOut();
-    window.location.reload();
+    setSessionError(false);
+    setScreen('landing');
   };
 
-  // --- TELA DE LOADING INICIAL ---
+  // --- TELA DE LOADING ---
   if (isCheckingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white px-4">
@@ -342,39 +331,57 @@ const App: React.FC = () => {
                <div className="w-2 h-2 bg-whatsapp rounded-full"></div>
             </div>
           </div>
-          
           <div className="text-center space-y-2">
             <p className="text-gray-500 font-medium animate-pulse">
               Conectando ao sistema...
             </p>
           </div>
-
-          {showLoadingFallback && (
-            <div className="animate-fade-in-up w-full">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 mb-4 flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <p>A conexão está mais lenta que o normal.</p>
-              </div>
-              <button 
-                onClick={handleForceReset}
-                className="w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:text-darkBlue transition-colors flex items-center justify-center gap-2 shadow-sm"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Reiniciar Aplicação
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
+  // --- TELA DE ERRO DE CONEXÃO ---
+  if (sessionError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center bg-gray-50">
+        <div className="mb-6 bg-yellow-100 p-6 rounded-full animate-pop-in">
+           <WifiOff className="w-12 h-12 text-yellow-600" />
+        </div>
+        
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Conexão lenta</h2>
+        <p className="text-slate-500 mb-8 text-lg max-w-md">
+          Não foi possível verificar sua sessão. Sua internet pode estar instável.
+        </p>
+        
+        <button 
+          onClick={checkSession} 
+          className="bg-whatsapp hover:bg-whatsappDark text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md mb-4 flex items-center gap-2 transform hover:-translate-y-1 w-full max-w-xs justify-center"
+        >
+          <RefreshCw className="w-5 h-5" /> Tentar novamente
+        </button>
+        
+        <button 
+          onClick={handleForceLogout} 
+          className="bg-transparent text-slate-500 border border-slate-200 hover:bg-white hover:text-red-500 hover:border-red-200 font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2 w-full max-w-xs justify-center"
+        >
+          <LogOut className="w-4 h-4" /> Sair e voltar ao início
+        </button>
+      </div>
+    );
+  }
+
+  // --- RENDERIZAÇÃO PRINCIPAL ---
   return (
     <div className="font-sans antialiased text-gray-900">
       
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => {
+           setIsLoginModalOpen(false);
+           // Quando fecha o modal após login, verifica sessão novamente para atualizar tela
+           checkSession();
+        }} 
       />
 
       {screen === 'landing' && (
